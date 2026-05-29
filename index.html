@@ -1,0 +1,1312 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0037FF" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="EMPOWER RI" />
+  <title>EMPOWER ROOM INTELLIGENCE — Norton Sales</title>
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json" />
+
+  <!-- Icons -->
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     BADGE MARVESTING (fixe, toujours visible)
+═══════════════════════════════════════════ -->
+<div id="badge-marvesting" class="badge-marvesting hidden">
+  <img src="icons/marvesting-logo.png" alt="Marvesting" class="badge-marvesting__img" />
+</div>
+
+<!-- ═══════════════════════════════════════════
+     LOADER GLOBAL
+═══════════════════════════════════════════ -->
+<div id="global-loader" class="global-loader">
+  <div class="loader-spinner"></div>
+  <p class="loader-text">Chargement…</p>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TOAST NOTIFICATIONS
+═══════════════════════════════════════════ -->
+<div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+<!-- ═══════════════════════════════════════════
+     APP ROOT
+═══════════════════════════════════════════ -->
+<div id="app" class="app hidden">
+
+  <!-- TOPBAR -->
+  <header id="topbar" class="topbar hidden">
+    <button id="btn-back" class="topbar__back hidden" aria-label="Retour">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <path d="M19 12H5M12 5l-7 7 7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <h1 id="topbar-title" class="topbar__title">
+      <span class="topbar__title-text">EMPOWER RI</span>
+      <img src="icons/norton-logo.png" alt="Norton" class="topbar__norton-logo hidden" id="topbar-norton-logo" />
+    </h1>
+    <div id="topbar-actions" class="topbar__actions"></div>
+  </header>
+
+  <!-- SCREEN CONTAINER -->
+  <main id="screen-container" class="screen-container"></main>
+
+  <!-- BOTTOM NAV -->
+  <nav id="bottom-nav" class="bottom-nav hidden">
+    <button class="nav-item" data-route="/home" aria-label="Accueil">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
+        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" stroke="currentColor" stroke-width="2"/>
+        <polyline points="9,22 9,12 15,12 15,22" stroke="currentColor" stroke-width="2"/>
+      </svg>
+      <span class="nav-label">Accueil</span>
+    </button>
+    <button class="nav-item" data-route="/pipeline" aria-label="Pipeline">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
+        <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
+        <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
+        <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
+      </svg>
+      <span class="nav-label">Pipeline</span>
+    </button>
+    <button class="nav-item nav-item--add" data-route="/visite" aria-label="Nouvelle visite">
+      <div class="nav-add-btn">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span class="nav-label">Visite</span>
+    </button>
+    <button class="nav-item" data-route="/planning" aria-label="Planning">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
+        <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/>
+      </svg>
+      <span class="nav-label">Planning</span>
+    </button>
+    <button class="nav-item" data-route="/profil" aria-label="Profil">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/>
+        <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <span class="nav-label">Profil</span>
+    </button>
+  </nav>
+
+</div><!-- /#app -->
+
+
+<!-- ═══════════════════════════════════════════
+     TEMPLATES ÉCRANS (clonés par le router)
+═══════════════════════════════════════════ -->
+
+<!-- ── LOGIN ── -->
+<template id="tpl-login">
+  <section class="screen screen--login">
+    <div class="login__header">
+      <div class="login__logo">
+        <div class="login__logo-inner">
+          <span class="login__logo-text">E</span>
+        </div>
+      </div>
+      <h1 class="login__title">EMPOWER ROOM INTELLIGENCE</h1>
+      <img src="icons/norton-logo.png" alt="Norton" class="login__norton-logo" />
+      <p class="login__subtitle">Impact Sales Marketing × Norton / Gen Digital</p>
+    </div>
+
+    <div class="login__form">
+      <p class="login__label">Entrez votre PIN</p>
+      <div class="pin-display" id="pin-display">
+        <span class="pin-dot" data-idx="0"></span>
+        <span class="pin-dot" data-idx="1"></span>
+        <span class="pin-dot" data-idx="2"></span>
+        <span class="pin-dot" data-idx="3"></span>
+        <span class="pin-dot" data-idx="4"></span>
+        <span class="pin-dot" data-idx="5"></span>
+      </div>
+      <p id="login-error" class="login__error hidden">PIN incorrect. Réessayez.</p>
+
+      <div class="pin-keyboard">
+        <button class="pin-key" data-digit="1">1</button>
+        <button class="pin-key" data-digit="2">2</button>
+        <button class="pin-key" data-digit="3">3</button>
+        <button class="pin-key" data-digit="4">4</button>
+        <button class="pin-key" data-digit="5">5</button>
+        <button class="pin-key" data-digit="6">6</button>
+        <button class="pin-key" data-digit="7">7</button>
+        <button class="pin-key" data-digit="8">8</button>
+        <button class="pin-key" data-digit="9">9</button>
+        <button class="pin-key pin-key--empty"></button>
+        <button class="pin-key" data-digit="0">0</button>
+        <button class="pin-key pin-key--delete" id="pin-delete" aria-label="Supprimer">
+          <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+            <path d="M21 4H8L1 12l7 8h13a2 2 0 002-2V6a2 2 0 00-2-2z" stroke="currentColor" stroke-width="2"/>
+            <line x1="18" y1="9" x2="12" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="12" y1="9" x2="18" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <p class="login__version">v4.1 — FY27</p>
+  </section>
+</template>
+
+<!-- ── HOME / DASHBOARD ── -->
+<template id="tpl-home">
+  <section class="screen screen--home">
+    <!-- Greeting -->
+    <div class="home__greeting">
+      <div>
+        <p class="home__greeting-sub">Bonjour 👋</p>
+        <h2 class="home__greeting-name" id="home-nom"></h2>
+      </div>
+      <div class="home__greeting-badges">
+        <button class="icon-btn" id="btn-notifs" aria-label="Notifications">
+          <svg viewBox="0 0 24 24" fill="none" width="22" height="22">
+            <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <span class="notif-badge hidden" id="notif-count">0</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- KPI Quarter -->
+    <div class="kpi-card" id="kpi-quarter">
+      <div class="kpi-card__header">
+        <span class="kpi-card__label" id="kpi-quarter-label">Q1 FY27</span>
+        <span class="kpi-card__badge" id="kpi-quarter-pct">—%</span>
+      </div>
+      <div class="kpi-card__row">
+        <div class="kpi-item">
+          <span class="kpi-item__val" id="kpi-ca-reel">—</span>
+          <span class="kpi-item__label">CA Réel</span>
+        </div>
+        <div class="kpi-item kpi-item--divider">
+          <span class="kpi-item__val" id="kpi-ca-obj">—</span>
+          <span class="kpi-item__label">Objectif</span>
+        </div>
+        <div class="kpi-item">
+          <span class="kpi-item__val" id="kpi-ca-gap">—</span>
+          <span class="kpi-item__label">Écart</span>
+        </div>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar" id="kpi-progress-bar">
+          <div class="progress-bar__fill" id="kpi-progress-fill" style="width:0%"></div>
+        </div>
+        <span class="progress-bar__target">Objectif 100%</span>
+      </div>
+    </div>
+
+    <!-- Primes résumé -->
+    <div class="section-header">
+      <span class="section-header__title">Mes Primes</span>
+      <button class="section-header__link" data-route="/primes">Voir tout →</button>
+    </div>
+    <div class="primes-summary" id="primes-summary">
+      <div class="prime-chip prime-chip--axe1">
+        <span class="prime-chip__label">AXE1 CA</span>
+        <span class="prime-chip__val" id="prime-axe1">—€</span>
+      </div>
+      <div class="prime-chip prime-chip--axe2">
+        <span class="prime-chip__label">AXE2 NSB</span>
+        <span class="prime-chip__val" id="prime-axe2">—€</span>
+      </div>
+      <div class="prime-chip prime-chip--axe3">
+        <span class="prime-chip__label">AXE3</span>
+        <span class="prime-chip__val" id="prime-axe3">—€</span>
+      </div>
+      <!-- Bonus manager : affiché UNIQUEMENT si PIN=1000 par JS, jamais en CSS hide -->
+    </div>
+
+    <!-- Stats rapides -->
+    <div class="section-header">
+      <span class="section-header__title">Activité</span>
+    </div>
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card">
+        <span class="stat-card__val" id="stat-comptes">—</span>
+        <span class="stat-card__label">Comptes</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-card__val" id="stat-visites">—</span>
+        <span class="stat-card__label">Visites (Q)</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-card__val" id="stat-nsb">—</span>
+        <span class="stat-card__label">NSB</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-card__val" id="stat-appels">—</span>
+        <span class="stat-card__label">Appels/sem.</span>
+      </div>
+    </div>
+
+    <!-- Dernières actions -->
+    <div class="section-header">
+      <span class="section-header__title">Dernières actions</span>
+      <button class="section-header__link" data-route="/pipeline">Pipeline →</button>
+    </div>
+    <div class="actions-list" id="home-actions-list">
+      <div class="empty-state">
+        <p>Aucune action récente</p>
+      </div>
+    </div>
+
+    <!-- Bouton Phoning -->
+    <div class="home__phoning-banner" id="phoning-banner">
+      <div class="phoning-banner__content">
+        <span class="phoning-banner__icon">📞</span>
+        <div>
+          <p class="phoning-banner__title">Phoning semaine</p>
+          <p class="phoning-banner__sub"><span id="phoning-count">0</span>/10 appels</p>
+        </div>
+      </div>
+      <button class="btn btn--secondary btn--sm" data-route="/phoning">Lancer</button>
+    </div>
+
+  </section>
+</template>
+
+<!-- ── PIPELINE ── -->
+<template id="tpl-pipeline">
+  <section class="screen screen--pipeline">
+    <!-- Filtres -->
+    <div class="pipeline__filters">
+      <div class="search-bar">
+        <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+          <circle cx="11" cy="11" r="7" stroke="#6B7280" stroke-width="2"/>
+          <path d="M21 21l-4.35-4.35" stroke="#6B7280" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <input type="search" id="pipeline-search" class="search-bar__input" placeholder="Rechercher un compte…" />
+      </div>
+      <div class="filter-chips" id="filter-chips">
+        <button class="chip chip--active" data-filter="all">Tous</button>
+        <button class="chip" data-filter="A_contacter">À contacter</button>
+        <button class="chip" data-filter="En_discussion">En discussion</button>
+        <button class="chip" data-filter="Actif">Actif</button>
+        <button class="chip" data-filter="1re_commande">1re cmd</button>
+        <button class="chip" data-filter="Intégré">Intégré</button>
+        <button class="chip" data-filter="Bloqué">Bloqué</button>
+      </div>
+      <!-- Filtre CDS visible uniquement manager -->
+      <div id="filter-cds-wrap" class="filter-cds-wrap hidden">
+        <select id="filter-cds" class="select-input">
+          <option value="all">Tous les CDS</option>
+          <option value="4001">Mehdi</option>
+          <option value="4002">Lyes</option>
+          <option value="4003">Johanne</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Bouton cold visite -->
+    <button class="btn btn--coral btn--full" id="btn-cold-visit">
+      🏪 Nouvelle visite à froid
+    </button>
+
+    <!-- Compteur résultats -->
+    <p class="pipeline__count" id="pipeline-count">— comptes</p>
+
+    <!-- Liste -->
+    <div class="compte-list" id="compte-list">
+      <div class="empty-state">
+        <div class="empty-state__icon">📋</div>
+        <p>Chargement des comptes…</p>
+      </div>
+    </div>
+  </section>
+</template>
+
+<!-- ── FICHE COMPTE ── -->
+<template id="tpl-compte">
+  <section class="screen screen--compte">
+    <!-- Header compte -->
+    <div class="compte__header" id="compte-header">
+      <div class="compte__header-main">
+        <h2 class="compte__nom" id="compte-nom">—</h2>
+        <p class="compte__ville" id="compte-ville">—</p>
+      </div>
+      <div class="compte__header-badges">
+        <span class="chip-statut" id="compte-statut-chip">—</span>
+        <span class="chip-priorite" id="compte-priorite-chip">—</span>
+      </div>
+    </div>
+
+    <!-- Actions rapides -->
+    <div class="compte__actions">
+      <button class="btn btn--coral btn--full" id="btn-saisir-visite">
+        🏪 Saisir visite
+      </button>
+      <div class="compte__actions-row">
+        <button class="btn btn--secondary btn--flex" id="btn-appeler">📞 Appeler + IA</button>
+        <button class="btn btn--secondary btn--flex" id="btn-modifier-statut">✏️ Statut</button>
+      </div>
+    </div>
+
+    <!-- CA Terrain -->
+    <div class="card" id="compte-ca-card">
+      <div class="card__header">
+        <span class="card__title">CA Terrain</span>
+        <button class="icon-btn" id="btn-import-ca">+ Import CA</button>
+      </div>
+      <div class="ca-row">
+        <div class="ca-item">
+          <span class="ca-item__val" id="ca-terrain-val">—</span>
+          <span class="ca-item__label">CA Terrain</span>
+        </div>
+        <div class="ca-item">
+          <span class="ca-item__val" id="ca-import-val">—</span>
+          <span class="ca-item__label">CA Import</span>
+        </div>
+        <div class="ca-item ca-item--total">
+          <span class="ca-item__val" id="ca-total-val">—</span>
+          <span class="ca-item__label">Total</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Infos compte -->
+    <div class="card">
+      <div class="card__header">
+        <span class="card__title">Informations</span>
+      </div>
+      <div class="info-list">
+        <div class="info-row">
+          <span class="info-row__label">Segment</span>
+          <span class="info-row__val" id="compte-segment">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-row__label">SIRET</span>
+          <span class="info-row__val" id="compte-siret">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-row__label">CDS</span>
+          <span class="info-row__val" id="compte-cds">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-row__label">Origine</span>
+          <span class="info-row__val" id="compte-origine">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-row__label">Intérêt EMPOWER</span>
+          <span class="info-row__val" id="compte-empower">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-row__label">Score</span>
+          <span class="info-row__val" id="compte-score">—/100</span>
+        </div>
+        <div class="info-row">
+          <span class="info-row__label">Prochaine action</span>
+          <span class="info-row__val" id="compte-next-action">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Flags -->
+    <div class="card">
+      <div class="card__header"><span class="card__title">Flags</span></div>
+      <div class="flags-row">
+        <span class="flag-chip" id="flag-1re-cmd">🛒 1re commande</span>
+        <span class="flag-chip" id="flag-nsb">⭐ NSB</span>
+      </div>
+    </div>
+
+    <!-- Timeline actions -->
+    <div class="card">
+      <div class="card__header"><span class="card__title">Timeline</span></div>
+      <div class="timeline" id="compte-timeline">
+        <div class="empty-state"><p>Aucune action enregistrée</p></div>
+      </div>
+    </div>
+
+    <!-- Note privée (CDS + PIN 1000) -->
+    <div class="card hidden" id="note-privee-card">
+      <div class="card__header"><span class="card__title">Note privée</span></div>
+      <p class="note-privee__text" id="note-privee-text">—</p>
+    </div>
+
+  </section>
+</template>
+
+<!-- ── VISITE TERRAIN (formulaire 10 blocs) ── -->
+<template id="tpl-visite">
+  <section class="screen screen--visite">
+    <div class="visite__form" id="visite-form">
+
+      <!-- PROGRESS STEPPER -->
+      <div class="visite__stepper">
+        <div class="stepper-track">
+          <div class="stepper-fill" id="stepper-fill" style="width:10%"></div>
+        </div>
+        <p class="stepper-label" id="stepper-label">Bloc 1/10 — Identification</p>
+      </div>
+
+      <!-- BLOC 1 — Identification -->
+      <div class="visite-bloc" id="bloc-1">
+        <h3 class="visite-bloc__title">📍 Identification</h3>
+
+        <div class="form-group">
+          <label class="form-label">Source de la visite *</label>
+          <select class="select-input" id="v-source">
+            <option value="">Choisir…</option>
+            <option value="base_historique">📂 Base historique</option>
+            <option value="prospect_existant">🔵 Prospect existant</option>
+            <option value="cold_revendeur">🆕 Cold revendeur</option>
+          </select>
+        </div>
+
+        <!-- Typeahead base historique -->
+        <div class="form-group hidden" id="typeahead-historique-wrap">
+          <label class="form-label">Rechercher le compte *</label>
+          <input type="text" class="text-input" id="typeahead-historique" placeholder="Nom du compte…" autocomplete="off" />
+          <div class="typeahead-results hidden" id="typeahead-hist-results"></div>
+        </div>
+
+        <!-- Typeahead prospect existant -->
+        <div class="form-group hidden" id="typeahead-prospect-wrap">
+          <label class="form-label">Rechercher le prospect *</label>
+          <input type="text" class="text-input" id="typeahead-prospect" placeholder="Nom du prospect…" autocomplete="off" />
+          <div class="typeahead-results hidden" id="typeahead-prosp-results"></div>
+          <!-- Alerte doublon -->
+          <div class="alert alert--warning hidden" id="alert-doublon">
+            ⚠️ Doublon détecté à <span id="doublon-pct">—</span>% — vérifiez avant de continuer.
+          </div>
+        </div>
+
+        <!-- Cold revendeur -->
+        <div id="cold-revendeur-wrap" class="hidden">
+          <div class="form-group">
+            <label class="form-label">Nom de l'enseigne *</label>
+            <input type="text" class="text-input" id="v-nom-enseigne" placeholder="ex: Micro-Informatique NORD" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Ville *</label>
+            <input type="text" class="text-input" id="v-ville" placeholder="ex: Lille" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Segment *</label>
+            <select class="select-input" id="v-segment">
+              <option value="">Choisir…</option>
+              <option value="IT">IT</option>
+              <option value="MSP">MSP</option>
+              <option value="Boutique">Boutique</option>
+              <option value="Autre">Autre</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group form-group--half">
+            <label class="form-label">Date visite *</label>
+            <input type="date" class="text-input" id="v-date" />
+          </div>
+          <div class="form-group form-group--half">
+            <label class="form-label">Heure *</label>
+            <input type="time" class="text-input" id="v-heure" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Type de visite *</label>
+          <select class="select-input" id="v-type">
+            <option value="">Choisir…</option>
+            <option value="Passage spontané">Passage spontané</option>
+            <option value="RDV planifié">RDV planifié</option>
+            <option value="Suivi onboarding">Suivi onboarding</option>
+            <option value="Prospection">Prospection</option>
+            <option value="Welcome Pack">Welcome Pack</option>
+            <option value="Formation">Formation</option>
+          </select>
+        </div>
+
+        <div class="gps-row">
+          <button class="btn btn--secondary btn--sm" id="btn-gps">📍 Géolocaliser</button>
+          <span class="gps-status" id="gps-status">—</span>
+          <button class="btn btn--secondary btn--sm hidden" id="btn-proximite">🗺️ Revendeurs proches</button>
+        </div>
+      </div>
+
+      <!-- BLOC 2 — Profil revendeur -->
+      <div class="visite-bloc hidden" id="bloc-2">
+        <h3 class="visite-bloc__title">🏪 Profil Revendeur</h3>
+        <p class="form-hint">Sélectionnez plusieurs caractéristiques</p>
+
+        <div class="form-group">
+          <label class="form-label">Type de revendeur</label>
+          <div class="chips-group" id="chips-type-revendeur" data-key="type_revendeur">
+            <button class="chip chip--coral-select" data-val="VAR">VAR</button>
+            <button class="chip chip--coral-select" data-val="MSP">MSP</button>
+            <button class="chip chip--coral-select" data-val="Boutique IT">Boutique IT</button>
+            <button class="chip chip--coral-select" data-val="Grossiste">Grossiste</button>
+            <button class="chip chip--coral-select" data-val="Intégrateur">Intégrateur</button>
+            <button class="chip chip--coral-select" data-val="Opérateur">Opérateur</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Clientèle principale</label>
+          <div class="chips-group" id="chips-clientele" data-key="clientele">
+            <button class="chip chip--coral-select" data-val="PME">PME</button>
+            <button class="chip chip--coral-select" data-val="TPE">TPE</button>
+            <button class="chip chip--coral-select" data-val="ETI">ETI</button>
+            <button class="chip chip--coral-select" data-val="Grand compte">Grand compte</button>
+            <button class="chip chip--coral-select" data-val="Particuliers">Particuliers</button>
+            <button class="chip chip--coral-select" data-val="Secteur public">Secteur public</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Canal de vente</label>
+          <div class="chips-group" id="chips-canal" data-key="canal">
+            <button class="chip chip--coral-select" data-val="En ligne">En ligne</button>
+            <button class="chip chip--coral-select" data-val="En magasin">En magasin</button>
+            <button class="chip chip--coral-select" data-val="Mixte">Mixte</button>
+            <button class="chip chip--coral-select" data-val="B2B direct">B2B direct</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- BLOC 3 — Objectifs visite -->
+      <div class="visite-bloc hidden" id="bloc-3">
+        <h3 class="visite-bloc__title">🎯 Objectifs de la visite</h3>
+        <div class="chips-group chips-group--multi" id="chips-objectifs" data-key="objectifs">
+          <button class="chip chip--coral-select" data-val="Présentation Norton/EMPOWER">Présentation Norton/EMPOWER</button>
+          <button class="chip chip--coral-select" data-val="Prise de commande">Prise de commande</button>
+          <button class="chip chip--coral-select" data-val="Onboarding EMPOWER">Onboarding EMPOWER</button>
+          <button class="chip chip--coral-select" data-val="Formation produit">Formation produit</button>
+          <button class="chip chip--coral-select" data-val="Welcome Pack">Welcome Pack</button>
+          <button class="chip chip--coral-select" data-val="Suivi commande">Suivi commande</button>
+          <button class="chip chip--coral-select" data-val="Audit sécurité">Audit sécurité</button>
+          <button class="chip chip--coral-select" data-val="Fidélisation">Fidélisation</button>
+          <button class="chip chip--coral-select" data-val="Prospection 1er contact">Prospection 1er contact</button>
+          <button class="chip chip--coral-select" data-val="Autre">Autre</button>
+        </div>
+      </div>
+
+      <!-- BLOC 4 — Checklist Norton + EMPOWER -->
+      <div class="visite-bloc hidden" id="bloc-4">
+        <h3 class="visite-bloc__title">✅ Checklist Norton + EMPOWER</h3>
+
+        <div class="checklist" id="checklist-norton">
+          <label class="check-item"><input type="checkbox" value="Norton 360" /><span>Norton 360</span></label>
+          <label class="check-item"><input type="checkbox" value="NSB" id="check-nsb" /><span>NSB (Nouveau sujet bienvenue)</span></label>
+          <label class="check-item"><input type="checkbox" value="Avast Business Hub" /><span>Avast Business Hub</span></label>
+          <label class="check-item"><input type="checkbox" value="Argumentaire marge" /><span>Argumentaire marge</span></label>
+          <label class="check-item"><input type="checkbox" value="Demo EMPOWER" /><span>Démo EMPOWER</span></label>
+          <label class="check-item"><input type="checkbox" value="Flyer laissé" /><span>Flyer laissé</span></label>
+          <label class="check-item"><input type="checkbox" value="Welcome Pack remis" /><span>Welcome Pack remis</span></label>
+          <label class="check-item"><input type="checkbox" value="Commande prise" id="check-commande" /><span>Commande prise</span></label>
+        </div>
+
+        <!-- Arbre EMPOWER -->
+        <div class="form-group">
+          <label class="form-label">Intérêt EMPOWER *</label>
+          <div class="chips-group chips-group--exclusive" id="chips-empower-interet" data-key="empower_interet">
+            <button class="chip chip--coral-select" data-val="OUI_deja_partenaire">OUI — Déjà partenaire</button>
+            <button class="chip chip--coral-select" data-val="OUI_interesse">OUI — Intéressé</button>
+            <button class="chip chip--coral-select" data-val="NON">NON</button>
+          </div>
+        </div>
+
+        <!-- Déjà partenaire -->
+        <div class="form-group hidden" id="empower-partenaire-wrap">
+          <label class="form-label">Nb portails actifs</label>
+          <input type="number" class="text-input" id="v-portails" min="0" placeholder="0" />
+        </div>
+
+        <!-- Non → raison -->
+        <div class="form-group hidden" id="empower-non-wrap">
+          <label class="form-label">Raison</label>
+          <div class="chips-group chips-group--exclusive" id="chips-empower-raison" data-key="empower_raison">
+            <button class="chip chip--coral-select" data-val="Pas de besoin">Pas de besoin</button>
+            <button class="chip chip--coral-select" data-val="Budget">Budget</button>
+            <button class="chip chip--coral-select" data-val="Concurrent">Concurrent</button>
+            <button class="chip chip--coral-select" data-val="Pas la cible">Pas la cible</button>
+            <button class="chip chip--coral-select" data-val="Volume">Volume</button>
+            <button class="chip chip--coral-select" data-val="Recontacter 3 mois">Recontacter 3 mois</button>
+          </div>
+        </div>
+
+        <!-- Alerte EMPOWER intéressé -->
+        <div class="alert alert--success hidden" id="alert-empower-interesse">
+          ✅ Prospect ajouté : "Intéressé EMPOWER — À onboarder" — Flavie notifiée J0 + rappel CDS J+3
+        </div>
+      </div>
+
+      <!-- BLOC 5 — Freins -->
+      <div class="visite-bloc hidden" id="bloc-5">
+        <h3 class="visite-bloc__title">🚧 Freins identifiés</h3>
+        <div class="chips-group chips-group--multi" id="chips-freins" data-key="freins">
+          <button class="chip chip--coral-select" data-val="Prix trop élevé">Prix trop élevé</button>
+          <button class="chip chip--coral-select" data-val="Fidèle concurrent">Fidèle concurrent</button>
+          <button class="chip chip--coral-select" data-val="Manque de temps">Manque de temps</button>
+          <button class="chip chip--coral-select" data-val="Méconnaissance produit">Méconnaissance produit</button>
+          <button class="chip chip--coral-select" data-val="Stock insuffisant">Stock insuffisant</button>
+          <button class="chip chip--coral-select" data-val="Mauvaise expérience passée">Mauvaise expérience passée</button>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Contre-argument (300 car. max)</label>
+          <textarea class="text-area" id="v-contre-argument" maxlength="300" rows="3" placeholder="Votre réponse au frein…"></textarea>
+          <span class="char-count"><span id="ca-count">0</span>/300</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Résultat traitement</label>
+          <div class="chips-group chips-group--exclusive" id="chips-frein-resultat" data-key="frein_resultat">
+            <button class="chip chip--coral-select" data-val="Frein levé">Frein levé</button>
+            <button class="chip chip--coral-select" data-val="Partiellement levé">Partiellement levé</button>
+            <button class="chip chip--coral-select" data-val="Non levé">Non levé</button>
+            <button class="chip chip--coral-select" data-val="Remis à plus tard">Remis à plus tard</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- BLOC 6 — Concurrents -->
+      <div class="visite-bloc hidden" id="bloc-6">
+        <h3 class="visite-bloc__title">⚔️ Concurrents</h3>
+        <div class="chips-group chips-group--multi" id="chips-concurrents" data-key="concurrents">
+          <button class="chip chip--coral-select" data-val="ESET">ESET</button>
+          <button class="chip chip--coral-select" data-val="Bitdefender">Bitdefender</button>
+          <button class="chip chip--coral-select" data-val="Trend Micro">Trend Micro</button>
+          <button class="chip chip--coral-select" data-val="G Data">G Data</button>
+          <button class="chip chip--coral-select" data-val="Kaspersky">Kaspersky</button>
+          <button class="chip chip--coral-select" data-val="Microsoft Defender">Microsoft Defender</button>
+          <button class="chip chip--coral-select" data-val="Malwarebytes">Malwarebytes</button>
+          <button class="chip chip--coral-select" data-val="Sophos">Sophos</button>
+          <button class="chip chip--coral-select" data-val="Avast hors BH">Avast hors BH</button>
+          <button class="chip chip--coral-select" data-val="Autre">Autre</button>
+          <button class="chip chip--coral-select" data-val="Aucun">Aucun</button>
+        </div>
+        <div class="form-group hidden" id="concurrent-detail-wrap">
+          <label class="form-label">Position Norton</label>
+          <input type="text" class="text-input" id="v-position-norton" placeholder="ex: Leader prix" />
+          <label class="form-label mt-8">Part linéaire Norton (%)</label>
+          <input type="range" class="slider-coral" id="v-part-lineaire" min="0" max="100" value="0" />
+          <div class="slider-val-display"><span id="v-part-lineaire-val">0</span>%</div>
+        </div>
+      </div>
+
+      <!-- BLOC 7 — Grossistes -->
+      <div class="visite-bloc hidden" id="bloc-7">
+        <h3 class="visite-bloc__title">📦 Grossistes</h3>
+        <div class="chips-group chips-group--multi" id="chips-grossistes" data-key="grossistes">
+          <button class="chip chip--coral-select" data-val="Ingram Micro">Ingram Micro</button>
+          <button class="chip chip--coral-select" data-val="TD Synnex">TD Synnex</button>
+          <button class="chip chip--coral-select" data-val="Also">Also</button>
+          <button class="chip chip--coral-select" data-val="Esprinet">Esprinet</button>
+          <button class="chip chip--coral-select" data-val="Crea Distribution">Crea Distribution</button>
+          <button class="chip chip--coral-select" data-val="Direct éditeur">Direct éditeur</button>
+          <button class="chip chip--coral-select" data-val="Autre">Autre</button>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Canal appro</label>
+          <div class="chips-group chips-group--exclusive" id="chips-canal-appro" data-key="canal_appro">
+            <button class="chip chip--coral-select" data-val="Portail EMPOWER">Portail EMPOWER</button>
+            <button class="chip chip--coral-select" data-val="Grossiste physique">Grossiste physique</button>
+            <button class="chip chip--coral-select" data-val="Click & collect">Click &amp; collect</button>
+            <button class="chip chip--coral-select" data-val="Livraison directe">Livraison directe</button>
+            <button class="chip chip--coral-select" data-val="Non défini">Non défini</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- BLOC 8 — Résultat + prochaine action -->
+      <div class="visite-bloc hidden" id="bloc-8">
+        <h3 class="visite-bloc__title">📊 Résultat &amp; Prochaine action</h3>
+
+        <div class="form-group">
+          <label class="form-label">Résultat de la visite *</label>
+          <div class="chips-group chips-group--exclusive" id="chips-resultat" data-key="resultat">
+            <button class="chip chip--coral-select" data-val="Positif">✅ Positif</button>
+            <button class="chip chip--coral-select" data-val="Neutre">➡️ Neutre</button>
+            <button class="chip chip--coral-select" data-val="Négatif">❌ Négatif</button>
+            <button class="chip chip--coral-select" data-val="Absent">🚪 Absent</button>
+            <button class="chip chip--coral-select" data-val="Reporté">🔄 Reporté</button>
+          </div>
+        </div>
+
+        <!-- Suggestion absent -->
+        <div class="alert alert--info hidden" id="alert-absent">
+          💡 Absent détecté — prochaine visite suggérée dans 7 jours
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Réceptivité *</label>
+          <div class="slider-wrap">
+            <input type="range" class="slider-coral" id="v-receptivite" min="1" max="5" value="3" />
+            <div class="slider-labels">
+              <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+            </div>
+            <div class="slider-val-display receptivite-val">
+              <span id="receptivite-val">3</span>/5
+              <span class="label-ia hidden" id="label-chaud">🔥 CHAUD</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Interlocuteur</label>
+          <div class="form-row">
+            <input type="text" class="text-input" id="v-interlocuteur-prenom" placeholder="Prénom" />
+            <input type="text" class="text-input" id="v-interlocuteur-nom" placeholder="Nom" />
+          </div>
+          <input type="text" class="text-input mt-8" id="v-interlocuteur-fonction" placeholder="Fonction" />
+          <label class="toggle-row mt-8">
+            <span>Contact direct</span>
+            <input type="checkbox" class="toggle-input" id="toggle-contact-direct" />
+            <span class="toggle-track"></span>
+          </label>
+          <div class="hidden form-row mt-8" id="contact-direct-wrap">
+            <input type="tel" class="text-input" id="v-tel" placeholder="Téléphone" />
+            <input type="email" class="text-input" id="v-email" placeholder="Email" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Prochaine action</label>
+          <input type="text" class="text-input" id="v-prochaine-action" placeholder="ex: Rappeler pour devis" />
+          <input type="date" class="text-input mt-8" id="v-prochaine-date" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Nouveau statut EMPOWER</label>
+          <select class="select-input" id="v-statut-empower">
+            <option value="">Inchangé</option>
+            <option value="A_contacter">À contacter</option>
+            <option value="En_discussion">En discussion</option>
+            <option value="Compte_créé">Compte créé</option>
+            <option value="Actif">Actif</option>
+            <option value="1re_commande">1re commande</option>
+            <option value="Intégré">Intégré</option>
+            <option value="Bloqué">Bloqué</option>
+          </select>
+        </div>
+
+        <!-- Alerte commande prise -->
+        <div class="alert alert--success hidden" id="alert-commande">
+          🛒 Commande prise — suggestion : statut "1re_commande" + notification Tadjidine
+        </div>
+      </div>
+
+      <!-- BLOC 9 — Médias + IA -->
+      <div class="visite-bloc hidden" id="bloc-9">
+        <h3 class="visite-bloc__title">🎤 Médias &amp; IA</h3>
+
+        <div class="form-group" id="note-privee-form">
+          <label class="form-label">Note privée (500 car.)</label>
+          <textarea class="text-area" id="v-note-privee" maxlength="500" rows="4" placeholder="Note interne confidentielle…"></textarea>
+          <span class="char-count"><span id="np-count">0</span>/500</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Photo principale</label>
+          <div class="media-btns">
+            <button class="btn btn--secondary btn--sm" id="btn-prendre-photo">📷 Prendre</button>
+            <button class="btn btn--secondary btn--sm" id="btn-importer-photo">🖼️ Importer</button>
+          </div>
+          <input type="file" accept="image/*" capture="environment" id="input-photo" class="hidden" />
+          <div class="photo-preview hidden" id="photo-preview">
+            <img id="photo-preview-img" src="" alt="Photo visite" />
+          </div>
+        </div>
+
+        <!-- IA Groq -->
+        <div class="card card--ia">
+          <div class="card__header">
+            <span class="card__title">🎤 Mode IA — Dictée 30s</span>
+            <span class="chip chip--small">Groq Whisper</span>
+          </div>
+          <p class="form-hint">Dictez le compte rendu de visite. Groq Whisper transcrit, Llama pré-remplit les blocs.</p>
+          <button class="btn btn--primary btn--full" id="btn-dicter">
+            🎤 Dicter (30s max)
+          </button>
+          <div class="ia-status hidden" id="ia-status">
+            <div class="loader-spinner loader-spinner--sm"></div>
+            <span id="ia-status-text">Transcription en cours…</span>
+          </div>
+          <!-- STUB: endpoint Groq à brancher -->
+          <!-- API.groqTranscribe(audioBlob) → API.groqLlama(transcription) -->
+        </div>
+      </div>
+
+      <!-- BLOC 10 — Visibilité Marketing PDV -->
+      <div class="visite-bloc hidden" id="bloc-10">
+        <h3 class="visite-bloc__title">🎨 Visibilité Marketing PDV</h3>
+
+        <div class="form-group">
+          <label class="toggle-row">
+            <span class="form-label mb-0">Visibilité marketing présente ?</span>
+            <input type="checkbox" class="toggle-input" id="toggle-marketing" />
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+
+        <div class="form-group hidden" id="marketing-non-wrap">
+          <label class="form-label">Raison absence</label>
+          <div class="chips-group chips-group--exclusive" id="chips-raison-absence" data-key="raison_absence">
+            <button class="chip chip--coral-select" data-val="Non proposé">Non proposé</button>
+            <button class="chip chip--coral-select" data-val="Refus revendeur">Refus revendeur</button>
+            <button class="chip chip--coral-select" data-val="En attente livraison">En attente livraison</button>
+            <button class="chip chip--coral-select" data-val="Autre">Autre</button>
+          </div>
+        </div>
+
+        <div class="hidden" id="marketing-oui-wrap">
+          <!-- Étape 1 : Supports -->
+          <div class="form-group">
+            <label class="form-label">Supports en place</label>
+            <div class="chips-group chips-group--multi" id="chips-supports" data-key="marketing_supports">
+              <button class="chip chip--coral-select" data-val="PLV Norton">PLV Norton</button>
+              <button class="chip chip--coral-select" data-val="Affiche vitrine">Affiche vitrine</button>
+              <button class="chip chip--coral-select" data-val="MEA">MEA</button>
+              <button class="chip chip--coral-select" data-val="Leaflets/Flyers">Leaflets/Flyers</button>
+              <button class="chip chip--coral-select" data-val="Box Norton">Box Norton</button>
+              <button class="chip chip--coral-select" data-val="Totem">Totem</button>
+              <button class="chip chip--coral-select" data-val="Présentoir comptoir">Présentoir comptoir</button>
+              <button class="chip chip--coral-select" data-val="Habillage rayon">Habillage rayon</button>
+            </div>
+          </div>
+
+          <!-- Étape 2 : État -->
+          <div class="form-group">
+            <label class="form-label">État de la visibilité *</label>
+            <div class="chips-group chips-group--exclusive" id="chips-etat-mktg" data-key="marketing_etat">
+              <button class="chip chip--coral-select" data-val="Bon état">✅ Bon état</button>
+              <button class="chip chip--coral-select" data-val="Dégradé">⚠️ Dégradé / À remplacer</button>
+              <button class="chip chip--coral-select" data-val="Absent malgré engagement">🚫 Absent malgré engagement</button>
+            </div>
+          </div>
+
+          <!-- Étape 3 : Photos -->
+          <div class="form-group">
+            <label class="form-label">Photos merchandising (4 max)</label>
+            <div class="photos-grid" id="marketing-photos-grid">
+              <!-- 4 blocs photo générés par JS -->
+            </div>
+          </div>
+
+          <!-- Étape 4 : Action requise -->
+          <div class="form-group">
+            <label class="toggle-row">
+              <span>Action marketing requise ?</span>
+              <input type="checkbox" class="toggle-input" id="toggle-action-mktg" />
+              <span class="toggle-track"></span>
+            </label>
+            <div class="hidden mt-8" id="action-mktg-wrap">
+              <select class="select-input" id="v-action-mktg-type">
+                <option value="">Type d'action…</option>
+                <option value="Relivraison PLV">Relivraison PLV</option>
+                <option value="Pose affiche">Pose affiche</option>
+                <option value="Installation MEA">Installation MEA</option>
+                <option value="Commande Box/Totem">Commande Box/Totem</option>
+                <option value="Formation mise en rayon">Formation mise en rayon</option>
+                <option value="Autre">Autre</option>
+              </select>
+              <textarea class="text-area mt-8" id="v-action-mktg-note" maxlength="150" rows="2" placeholder="Précisez…"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- NAVIGATION BLOCS -->
+      <div class="visite-nav sticky-bottom">
+        <button class="btn btn--secondary" id="btn-bloc-prev" disabled>← Précédent</button>
+        <span class="visite-nav__step" id="visite-step-indicator">1/10</span>
+        <button class="btn btn--coral" id="btn-bloc-next">Suivant →</button>
+      </div>
+
+      <!-- BOUTON SOUMETTRE (bloc 10 uniquement) -->
+      <div class="visite-submit hidden" id="visite-submit-wrap">
+        <button class="btn btn--primary btn--full btn--lg" id="btn-submit-visite">
+          ✅ Enregistrer la visite
+        </button>
+      </div>
+
+    </div><!-- /visite-form -->
+  </section>
+</template>
+
+<!-- ── PHONING ── -->
+<template id="tpl-phoning">
+  <section class="screen screen--phoning">
+    <!-- Compteur semaine -->
+    <div class="phoning-counter-card">
+      <div class="phoning-counter__circle">
+        <svg viewBox="0 0 60 60" class="counter-svg">
+          <circle cx="30" cy="30" r="26" fill="none" stroke="#E5E7EB" stroke-width="5"/>
+          <circle cx="30" cy="30" r="26" fill="none" stroke="#0037FF" stroke-width="5"
+            stroke-dasharray="163" stroke-dashoffset="163"
+            stroke-linecap="round" transform="rotate(-90 30 30)"
+            id="counter-circle" />
+        </svg>
+        <div class="counter-text">
+          <span class="counter-val" id="phoning-week-count">0</span>
+          <span class="counter-total">/10</span>
+        </div>
+      </div>
+      <div class="phoning-counter__info">
+        <p class="phoning-counter__title">Appels cette semaine</p>
+        <p class="phoning-counter__sub" id="phoning-week-label">Semaine en cours</p>
+      </div>
+    </div>
+
+    <!-- Liste call list -->
+    <div class="section-header">
+      <span class="section-header__title">À appeler</span>
+      <button class="section-header__link" id="btn-add-appel">+ Ajouter</button>
+    </div>
+    <div class="call-list" id="call-list">
+      <div class="empty-state">
+        <p>Aucun compte en liste d'appels</p>
+      </div>
+    </div>
+
+    <!-- Questionnaire appel -->
+    <div class="phoning-questionnaire hidden" id="phoning-questionnaire">
+      <div class="card card--appel">
+        <div class="card__header">
+          <span class="card__title" id="appel-compte-nom">Appel en cours</span>
+          <button class="icon-btn" id="btn-close-questionnaire">✕</button>
+        </div>
+        <div class="questionnaire-questions" id="questionnaire-questions">
+          <!-- Généré dynamiquement -->
+        </div>
+        <button class="btn btn--primary btn--full mt-16" id="btn-save-appel">
+          💾 Enregistrer l'appel
+        </button>
+      </div>
+    </div>
+  </section>
+</template>
+
+<!-- ── COPIL (PIN 1000/2000) ── -->
+<template id="tpl-copil">
+  <section class="screen screen--copil">
+    <!-- Dashboard équipe -->
+    <div class="section-header">
+      <span class="section-header__title">Performance Équipe</span>
+      <span class="chip chip--small" id="copil-quarter-label">Q1 FY27</span>
+    </div>
+
+    <div class="team-kpi-list" id="team-kpi-list">
+      <!-- Généré par JS pour chaque CDS -->
+    </div>
+
+    <!-- Bonus manager (PIN 1000 uniquement — inséré dans le DOM par JS) -->
+    <!-- Ne pas mettre ici de div hidden — le bonus manager est ABSENT du DOM si PIN ≠ 1000 -->
+
+    <!-- Objectifs -->
+    <div class="section-header mt-16">
+      <span class="section-header__title">Objectifs FY27</span>
+      <button class="btn btn--secondary btn--sm" id="btn-reviser-obj">✏️ Réviser</button>
+    </div>
+    <div class="objectifs-table" id="objectifs-table">
+      <!-- Tableau généré par JS -->
+    </div>
+
+    <!-- Exports -->
+    <div class="section-header mt-16">
+      <span class="section-header__title">Exports</span>
+    </div>
+    <div class="exports-btns">
+      <button class="btn btn--primary btn--full" id="btn-export-pdf">
+        📄 Export COPIL PDF (4 pages)
+      </button>
+      <button class="btn btn--secondary btn--full mt-8" id="btn-export-excel">
+        📊 Export Excel EMPOWER ROOM INTELLIGENCE
+      </button>
+    </div>
+
+    <!-- NSB Commandes -->
+    <div class="section-header mt-16">
+      <span class="section-header__title">NSB Commandes</span>
+      <button class="btn btn--secondary btn--sm" id="btn-valider-nsb">✅ Valider NSB</button>
+    </div>
+    <div class="nsb-list" id="nsb-list">
+      <div class="empty-state"><p>Chargement…</p></div>
+    </div>
+
+    <!-- Comptes bloqués -->
+    <div class="section-header mt-16">
+      <span class="section-header__title">Comptes bloqués</span>
+    </div>
+    <div class="blocked-list" id="blocked-list">
+      <div class="empty-state"><p>Chargement…</p></div>
+    </div>
+  </section>
+</template>
+
+<!-- ── FLAVIE (PIN 3000) — Lecture seule ── -->
+<template id="tpl-flavie">
+  <section class="screen screen--flavie">
+    <div class="alert alert--info">
+      🔒 Mode lecture seule — Flavie
+    </div>
+
+    <!-- Alertes EMPOWER -->
+    <div class="section-header">
+      <span class="section-header__title">🔔 Alertes EMPOWER</span>
+      <span class="chip chip--danger" id="alertes-count">0</span>
+    </div>
+    <div class="alertes-list" id="alertes-list">
+      <div class="empty-state"><p>Aucune alerte</p></div>
+    </div>
+
+    <!-- Pipeline visites terrain -->
+    <div class="section-header mt-16">
+      <span class="section-header__title">Pipeline Visites Terrain</span>
+    </div>
+    <div class="flavie-pipeline" id="flavie-pipeline">
+      <div class="empty-state"><p>Chargement…</p></div>
+    </div>
+
+    <!-- Leads à importer -->
+    <div class="section-header mt-16">
+      <span class="section-header__title">Leads Manuels</span>
+      <button class="btn btn--secondary btn--sm" id="btn-ajouter-lead">+ Ajouter lead</button>
+    </div>
+    <div class="leads-list" id="leads-list">
+      <div class="empty-state"><p>Aucun lead en attente</p></div>
+    </div>
+  </section>
+</template>
+
+<!-- ── PRIMES ── -->
+<template id="tpl-primes">
+  <section class="screen screen--primes">
+    <div class="primes__quarter-selector">
+      <select class="select-input" id="primes-quarter-select">
+        <option value="Q1">Q1 FY27</option>
+        <option value="Q2">Q2 FY27</option>
+        <option value="Q3">Q3 FY27</option>
+        <option value="Q4">Q4 FY27</option>
+      </select>
+    </div>
+
+    <!-- AXE 1 — CA -->
+    <div class="prime-axe-card">
+      <div class="prime-axe-card__header">
+        <span class="prime-axe-card__title">AXE 1 — CA vs Objectif</span>
+        <span class="prime-axe-card__amount" id="prime1-amount">—€</span>
+      </div>
+      <div class="prime-axe-card__progress">
+        <div class="progress-bar-wrap">
+          <div class="progress-bar">
+            <div class="progress-bar__fill" id="prime1-fill" style="width:0%"></div>
+          </div>
+          <div class="progress-bar-labels">
+            <span id="prime1-pct">—%</span>
+            <span>Obj: <span id="prime1-obj">—</span></span>
+          </div>
+        </div>
+      </div>
+      <div class="prime-axe-card__grid">
+        <div class="prime-grid-item"><span>< 80%</span><strong>0€</strong></div>
+        <div class="prime-grid-item"><span>80-99%</span><strong>200€</strong></div>
+        <div class="prime-grid-item"><span>100-119%</span><strong>400€</strong></div>
+        <div class="prime-grid-item prime-grid-item--best"><span>≥ 120%</span><strong>500€</strong></div>
+      </div>
+    </div>
+
+    <!-- AXE 2 — NSB -->
+    <div class="prime-axe-card">
+      <div class="prime-axe-card__header">
+        <span class="prime-axe-card__title">AXE 2 — NSB</span>
+        <span class="prime-axe-card__amount" id="prime2-amount">—€</span>
+      </div>
+      <div class="nsb-count-display">
+        <span class="nsb-count__val" id="nsb-count-val">0</span>
+        <span class="nsb-count__label">commandes validées</span>
+      </div>
+      <div class="prime-axe-card__grid" id="axe2-grid">
+        <!-- Adapté selon PIN (Mehdi/Johanne vs Tadjidine/Lyes) -->
+      </div>
+    </div>
+
+    <!-- AXE 3 -->
+    <div class="prime-axe-card">
+      <div class="prime-axe-card__header">
+        <span class="prime-axe-card__title">AXE 3 — Activation + Onboarding</span>
+        <span class="prime-axe-card__amount" id="prime3-amount">—€</span>
+      </div>
+      <div class="axe3-grid">
+        <div class="axe3-item">
+          <span class="axe3-item__label">3A — Activation base</span>
+          <span class="axe3-item__val" id="axe3a-val">—€</span>
+        </div>
+        <div class="axe3-item">
+          <span class="axe3-item__label">3B — Onboarding autonome</span>
+          <span class="axe3-item__val" id="axe3b-val">—€</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total primes -->
+    <div class="prime-total-card">
+      <span class="prime-total-card__label">Total estimé</span>
+      <span class="prime-total-card__val" id="prime-total">—€</span>
+    </div>
+
+    <!-- Bonus manager : inséré dynamiquement par JS si PIN=1000 -->
+  </section>
+</template>
+
+<!-- ── PLANNING ── -->
+<template id="tpl-planning">
+  <section class="screen screen--planning">
+    <!-- Vue semaine par défaut -->
+    <div class="planning__header">
+      <button class="icon-btn" id="btn-week-prev">←</button>
+      <span class="planning__week-label" id="planning-week-label">Semaine —</span>
+      <button class="icon-btn" id="btn-week-next">→</button>
+    </div>
+
+    <div class="planning__grid" id="planning-grid">
+      <!-- 5 jours générés par JS -->
+    </div>
+
+    <!-- Légende -->
+    <div class="planning__legend">
+      <span class="legend-item legend-item--planifie">● Planifiée</span>
+      <span class="legend-item legend-item--realise">● Réalisée</span>
+      <span class="legend-item legend-item--non-saisie">● Non saisie</span>
+    </div>
+  </section>
+</template>
+
+<!-- ── TUTORIEL ── -->
+<template id="tpl-tuto">
+  <section class="screen screen--tuto">
+    <div class="tuto__header">
+      <div class="tuto-progress-dots" id="tuto-dots"></div>
+    </div>
+
+    <div class="tuto__slides" id="tuto-slides">
+      <!-- Généré dynamiquement — 14 étapes (6 CDS + 8 manager) -->
+    </div>
+
+    <div class="tuto__nav">
+      <button class="btn btn--secondary" id="btn-tuto-prev">← Précédent</button>
+      <button class="btn btn--primary" id="btn-tuto-next">Suivant →</button>
+    </div>
+    <button class="btn btn--ghost btn--full mt-8" id="btn-skip-tuto">Passer le tutoriel</button>
+  </section>
+</template>
+
+<!-- ── PROFIL ── -->
+<template id="tpl-profil">
+  <section class="screen screen--profil">
+    <div class="profil__header">
+      <div class="profil__avatar">
+        <span class="profil__avatar-letter" id="profil-avatar-letter">—</span>
+      </div>
+      <h2 class="profil__nom" id="profil-nom">—</h2>
+      <p class="profil__role" id="profil-role">—</p>
+    </div>
+
+    <div class="card">
+      <div class="card__header"><span class="card__title">Compte</span></div>
+      <div class="info-list">
+        <div class="info-row">
+          <span class="info-row__label">PIN</span>
+          <span class="info-row__val">••••••</span>
+        </div>
+        <div class="info-row">
+          <span class="info-row__label">Rôle</span>
+          <span class="info-row__val" id="profil-role-info">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-row__label">Dernière connexion</span>
+          <span class="info-row__val" id="profil-last-login">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-row__label">Session expire dans</span>
+          <span class="info-row__val" id="profil-session-exp">—</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-8">
+      <div class="card__header"><span class="card__title">Application</span></div>
+      <div class="info-list">
+        <div class="info-row">
+          <span class="info-row__label">Version</span>
+          <span class="info-row__val">v4.0 — FY27</span>
+        </div>
+        <div class="info-row">
+          <span class="info-row__label">Quarter actif</span>
+          <span class="info-row__val" id="profil-quarter">Q1 FY27</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-8">
+      <div class="card__header"><span class="card__title">Actions</span></div>
+      <button class="menu-item" id="btn-voir-tuto">
+        <span>📚 Revoir le tutoriel</span>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2"/></svg>
+      </button>
+      <button class="menu-item" id="btn-phoning-profil">
+        <span>📞 Mon phoning</span>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2"/></svg>
+      </button>
+      <button class="menu-item menu-item--danger" id="btn-deconnexion">
+        <span>🚪 Déconnexion</span>
+      </button>
+    </div>
+  </section>
+</template>
+
+<!-- ══════════════════════════════════════════
+     MODAL RGPD — Consentement premier login
+══════════════════════════════════════════ -->
+<div id="modal-rgpd" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="rgpd-title" style="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:20px;max-width:420px;width:100%;padding:28px 24px;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="font-size:2.4rem;margin-bottom:8px;">🔒</div>
+      <h2 id="rgpd-title" style="font-size:1.1rem;font-weight:700;color:#111827;margin:0 0 6px;">Données & Confidentialité</h2>
+      <p style="font-size:.8rem;color:#6B7280;margin:0;">EMPOWER ROOM INTELLIGENCE — Norton × ISM</p>
+    </div>
+    <div style="font-size:.85rem;color:#374151;line-height:1.6;margin-bottom:20px;">
+      <p style="margin:0 0 10px;">Cette application collecte et traite les données suivantes :</p>
+      <ul style="margin:0 0 10px;padding-left:18px;">
+        <li><strong>Position GPS</strong> — uniquement lors des visites terrain, avec votre accord explicite à chaque saisie.</li>
+        <li><strong>Enregistrements audio</strong> — dictée de 30s max, transmise à Groq API (USA) pour transcription, non conservée.</li>
+        <li><strong>Données commerciales</strong> — comptes, visites, appels, stockés dans Google Sheets (Google Ireland Ltd, EU).</li>
+      </ul>
+      <p style="margin:0;color:#6B7280;font-size:.78rem;">Accès restreint aux équipes Norton × Impact Sales Marketing. Conformément au RGPD, vous pouvez demander la suppression de vos données à <strong>T.soefou@agence-impact.com</strong>.</p>
+    </div>
+    <button id="btn-rgpd-accept" style="width:100%;padding:14px;background:#0037FF;color:#fff;border:none;border-radius:12px;font-size:.95rem;font-weight:700;cursor:pointer;letter-spacing:.3px;">
+      ✅ J'accepte et je continue
+    </button>
+    <button id="btn-rgpd-decline" style="width:100%;padding:10px;background:none;border:none;color:#9CA3AF;font-size:.8rem;cursor:pointer;margin-top:8px;">
+      Refuser (accès limité aux fonctions hors géoloc/audio)
+    </button>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="app.js"></script>
+
+</body>
+</html>
