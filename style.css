@@ -111,18 +111,23 @@ body {
   position: fixed;
   top: 12px; right: 12px;
   z-index: 9999;
-  background: #111827;
+  background: #FFFFFF;                 /* B4 : fond blanc → logo couleur lisible, plus de carré blanc */
   padding: 5px 10px;
   border-radius: var(--r-full);
+  border: 1px solid var(--border);
   pointer-events: none;
   display: flex; align-items: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  box-shadow: 0 2px 8px rgba(0,0,0,.18);
 }
 .badge-marvesting__img {
   height: 18px; width: auto;
-  /* Filtre pour rendre le logo visible sur fond sombre */
-  filter: brightness(10) saturate(0);
-  opacity: .9;
+  object-fit: contain;
+  /* B4 : PNG transparent propre → AUCUN filtre. Le filtre brightness(10)
+     transformait le logo en bloc blanc sur certains rendus. */
+}
+.badge-marvesting__fallback {
+  font-size: .6rem; font-weight: 800; letter-spacing: .1em;
+  color: #0037FF;
 }
 
 /* ── TOAST ── */
@@ -182,8 +187,9 @@ body {
 .topbar__title-text { line-height: 1; }
 .topbar__norton-logo {
   height: 18px; width: auto;
-  filter: brightness(0) saturate(100%) invert(15%) sepia(100%) saturate(700%) hue-rotate(210deg);
-  opacity: .8;
+  object-fit: contain;
+  /* B4 : logo Norton déjà en couleur sur PNG transparent → pas de filtre hue-rotate fragile */
+  opacity: .9;
 }
 .topbar__actions {
   display: flex; gap: 8px;
@@ -955,10 +961,9 @@ body {
     height: 28px; width: auto;
     max-width: 180px;
     object-fit: contain;
-    /* Logo rouge/coral sur fond bleu : mix-blend-mode screen
-       rend le fond noir transparent */
-    mix-blend-mode: screen;
-    filter: brightness(1.2);
+    /* B4 : PNG déjà transparent (vérifié) → AUCUN blend-mode.
+       Le mix-blend-mode:screen précédent faisait disparaître/blanchir le logo.
+       Sur fond bleu, le logo rouge Marvesting reste parfaitement lisible. */
   }
   .login__ism-fallback {
     display: none; /* visible si img onerror */
@@ -996,8 +1001,7 @@ body {
   .login__marvesting-mobile {
     height: 20px; width: auto;
     object-fit: contain;
-    mix-blend-mode: multiply; /* fond noir → transparent sur fond blanc */
-    filter: saturate(1.1);
+    /* B4 : PNG transparent → pas de blend-mode. Logo couleur lisible sur fond blanc. */
   }
 
   /* Panneau formulaire droit — blanc */
@@ -1520,6 +1524,144 @@ body {
 .modal__close {
   background: none; border: none; cursor: pointer;
   color: var(--text-secondary); font-size: 1.25rem;
+}
+
+/* ════════════════════════════════════════════
+   V4.1 — COMPOSANTS AJOUTÉS (refonte chirurgicale)
+════════════════════════════════════════════ */
+
+/* Accent doré Stitch (Material You) */
+:root { --gold: #705D00; --gold-soft: #FFF6CC; }
+
+/* ── B5 : Toggle canal Phoning / Visite ── */
+.canal-toggle {
+  display: flex; gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 4px;
+}
+.canal-toggle__btn {
+  flex: 1; min-height: 48px;          /* thumb-friendly */
+  border: none; background: transparent; cursor: pointer;
+  border-radius: 9px;
+  font: var(--font-label); font-weight: 600;
+  color: var(--text-secondary);
+  transition: background .15s, color .15s, box-shadow .15s;
+}
+.canal-toggle__btn--active {
+  background: var(--bg); color: #0037FF;
+  box-shadow: 0 1px 3px rgba(0,0,0,.12);
+}
+
+/* ── B1 : Spinner inline non bloquant ── */
+.inline-spinner {
+  position: fixed; inset: 0; z-index: 1100;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.32);
+}
+.inline-spinner.hidden { display: none; }
+.inline-spinner__box {
+  background: var(--bg); border-radius: var(--r-lg);
+  padding: 24px 28px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.2);
+}
+.inline-spinner__txt { font: var(--font-label); color: var(--text-secondary); }
+.loader-spinner--sm { width: 22px; height: 22px; border-width: 2px; }
+
+/* ── B2 : Skeleton de chargement (jamais "Chargement…" figé) ── */
+.skeleton-card {
+  height: 92px; border-radius: var(--r-lg);
+  margin-bottom: 12px;
+  background: linear-gradient(90deg, var(--surface) 25%, #eef0f3 37%, var(--surface) 63%);
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.3s ease infinite;
+}
+@keyframes skeleton-shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+.empty-state--error .btn { margin-top: 12px; }
+
+/* ── B4 : Fallback textuel logo (si image manquante) ── */
+.logo-fallback {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 800; letter-spacing: .04em;
+  color: #FFD700; background: #0037FF;
+  padding: 4px 10px; border-radius: 6px; font-size: .85rem;
+}
+
+/* ── File offline : badge "X en attente" ── */
+.offline-badge {
+  position: fixed; left: 50%; bottom: 88px; transform: translateX(-50%);
+  z-index: 1200;
+  background: var(--warning); color: #1a1a1a;
+  font: var(--font-label); font-weight: 700; font-size: .8rem;
+  padding: 8px 16px; border-radius: 99px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.25);
+  cursor: pointer; min-height: 40px; display: flex; align-items: center;
+}
+
+/* ════════════════════════════════════════════
+   DASHBOARD PILOTAGE MANAGER — Bento cockpit Stitch
+════════════════════════════════════════════ */
+.cockpit { display: flex; flex-direction: column; gap: 20px; }
+
+/* Bento grid KPI — 2 col mobile, 4 col desktop */
+.bento-kpi {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+}
+.kpi-tile {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 16px;
+  min-height: 104px;
+  display: flex; flex-direction: column; justify-content: space-between;
+  transition: box-shadow .2s, transform .1s;
+}
+.kpi-tile:active { transform: scale(.99); }
+.kpi-tile__label { font: var(--font-caption); color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+.kpi-tile__value { font-size: 2rem; font-weight: 800; line-height: 1; color: var(--gold); }
+.kpi-tile--danger { background: #FEF2F2; border-color: #FECACA; }
+.kpi-tile--danger .kpi-tile__value { color: var(--danger); }
+.kpi-tile--success .kpi-tile__value { color: var(--success); }
+.kpi-tile__head { display: flex; justify-content: space-between; align-items: flex-start; }
+
+/* Bento split (donut + tableau) */
+.bento-split { display: grid; grid-template-columns: 1fr; gap: 16px; }
+
+/* Carte scoring équipe (progress) */
+.score-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 16px;
+}
+.score-card__title { font: var(--font-label); font-weight: 700; margin-bottom: 14px; }
+.score-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.score-row:last-child { border-bottom: none; }
+.score-row__avatar {
+  width: 38px; height: 38px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: .8rem; flex-shrink: 0;
+  background: var(--gold-soft); color: var(--gold);
+}
+.score-row__body { flex: 1; min-width: 0; }
+.score-row__name { font: var(--font-label); font-weight: 600; }
+.score-row__bar { height: 8px; background: var(--border); border-radius: 99px; overflow: hidden; margin-top: 5px; }
+.score-row__fill { height: 100%; border-radius: 99px; background: var(--gold); transition: width .4s ease; }
+.score-row__fill--success { background: var(--success); }
+.score-row__fill--danger { background: var(--danger); }
+.score-row__pct { font: var(--font-label); font-weight: 800; width: 48px; text-align: right; }
+.score-row__pct--success { color: var(--success); }
+.score-row__pct--danger { color: var(--danger); }
+.score-row__pct--warning { color: var(--warning); }
+
+/* Donut activité (visites vs phoning) */
+.activity-donut { display: flex; align-items: center; gap: 18px; }
+.activity-donut__legend { display: flex; flex-direction: column; gap: 8px; }
+.legend-item { display: flex; align-items: center; gap: 8px; font: var(--font-caption); }
+.legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+
+/* ── RESPONSIVE Desktop : Bento asymétrique ≥768px ── */
+@media (min-width: 768px) {
+  .bento-kpi { grid-template-columns: repeat(4, 1fr); }
+  .bento-split { grid-template-columns: 5fr 7fr; align-items: start; }
 }
 
 /* ── RESPONSIVE : mobile strict (<767px) ── */

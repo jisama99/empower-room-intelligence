@@ -30,7 +30,9 @@
      BADGE MARVESTING (fixe, toujours visible)
 ═══════════════════════════════════════════ -->
 <div id="badge-marvesting" class="badge-marvesting hidden">
-  <img src="icons/marvesting-logo.png" alt="Marvesting" class="badge-marvesting__img" />
+  <img src="icons/marvesting-logo.png" alt="Marvesting" class="badge-marvesting__img"
+       onerror="this.style.display='none';this.nextElementSibling.style.display='inline'" />
+  <span class="badge-marvesting__fallback" style="display:none">MARVESTING</span>
 </div>
 
 <!-- ═══════════════════════════════════════════
@@ -60,7 +62,8 @@
     </button>
     <h1 id="topbar-title" class="topbar__title">
       <span class="topbar__title-text">EMPOWER RI</span>
-      <img src="icons/norton-logo.png" alt="Norton" class="topbar__norton-logo hidden" id="topbar-norton-logo" />
+      <img src="icons/norton-logo.png" alt="Norton" class="topbar__norton-logo hidden" id="topbar-norton-logo"
+           onerror="this.style.display='none'" />
     </h1>
     <div id="topbar-actions" class="topbar__actions"></div>
   </header>
@@ -531,6 +534,16 @@
       <div class="visite-bloc" id="bloc-1">
         <h3 class="visite-bloc__title">📍 Identification</h3>
 
+        <!-- ── B5 : SÉLECTEUR DE CANAL — Phoning vs Visite ── -->
+        <div class="form-group">
+          <label class="form-label">Canal de l'action *</label>
+          <div class="canal-toggle" id="canal-toggle" role="tablist" aria-label="Canal d'action">
+            <button type="button" class="canal-toggle__btn canal-toggle__btn--active" data-canal="Visite" role="tab" aria-selected="true">🚗 Visite</button>
+            <button type="button" class="canal-toggle__btn" data-canal="Phoning" role="tab" aria-selected="false">📱 Phoning</button>
+          </div>
+          <p class="form-hint" id="canal-hint">Mode terrain complet : géolocalisation, photo et checklist activés.</p>
+        </div>
+
         <div class="form-group">
           <label class="form-label">Source de la visite *</label>
           <select class="select-input" id="v-source">
@@ -922,7 +935,7 @@
           <span class="char-count"><span id="np-count">0</span>/500</span>
         </div>
 
-        <div class="form-group">
+        <div class="form-group" data-canal-visite-only>
           <label class="form-label">Photo principale</label>
           <div class="media-btns">
             <button class="btn btn--secondary btn--sm" id="btn-prendre-photo">📷 Prendre</button>
@@ -1106,8 +1119,12 @@
 <!-- ── COPIL (PIN 1000/2000) ── -->
 <template id="tpl-copil">
   <section class="screen screen--copil">
+
+    <!-- ══ DASHBOARD PILOTAGE MANAGER (cockpit Bento) — rempli par JS ══ -->
+    <div class="cockpit" id="cockpit-pilotage"></div>
+
     <!-- Dashboard équipe -->
-    <div class="section-header">
+    <div class="section-header mt-16">
       <span class="section-header__title">Performance Équipe</span>
       <span class="chip chip--small" id="copil-quarter-label">Q1 FY27</span>
     </div>
