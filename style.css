@@ -153,8 +153,7 @@ body {
 .app {
   display: flex; flex-direction: column;
   min-height: 100vh;
-  max-width: 480px;
-  margin: 0 auto;
+  width: 100%;
 }
 
 /* ── TOPBAR ── */
@@ -206,7 +205,6 @@ body {
 /* ── BOTTOM NAV ── */
 .bottom-nav {
   position: fixed; bottom: 0; left: 0; right: 0;
-  max-width: 480px; margin: 0 auto;
   height: var(--nav-h);
   background: var(--bg);
   border-top: 1px solid var(--border);
@@ -655,18 +653,51 @@ body {
   padding: 0 4px;
 }
 
-/* ── SCREEN: LOGIN ── */
+/* ══════════════════════════════════════════
+   SCREEN: LOGIN — Mobile-first + Desktop
+══════════════════════════════════════════ */
+
+/* Panneau branding (desktop uniquement, caché mobile) */
+.login__brand-panel {
+  display: none;
+}
+
+/* Panneau formulaire : toujours visible */
+.login__form-panel {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  min-height: 100vh;
+}
+
+.login__form-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 100vh;
+  padding: var(--s-xl) var(--s-lg);
+}
+
 .screen--login {
   min-height: 100vh;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--s-xl) var(--s-lg);
+  display: flex;
+  flex-direction: row;
   background: var(--bg);
+  padding: 0;
 }
+
+/* En-tête mobile */
 .login__header {
   display: flex; flex-direction: column; align-items: center;
   gap: 10px; padding-top: var(--s-xl);
+  width: 100%;
 }
+
+/* Logo carré bleu/or */
 .login__logo {
   width: 80px; height: 80px;
   background: var(--nav);
@@ -681,22 +712,48 @@ body {
   display: flex; align-items: center; justify-content: center;
 }
 .login__logo-text { font-size: 2rem; font-weight: 700; color: var(--nav); }
+
+/* Logo Norton en-tête mobile */
+.login__norton-hero-mobile {
+  height: 26px; width: auto;
+  object-fit: contain;
+  margin-top: 4px;
+}
+
+/* Séparateur avec texte ISM */
+.login__ism-divider {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; max-width: 260px;
+  margin: 0 auto;
+}
+.login__ism-divider::before,
+.login__ism-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+.login__ism-text {
+  font-size: 0.6rem; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text-secondary); white-space: nowrap;
+}
+
 .login__title { font: var(--font-display); color: var(--nav); letter-spacing: -.02em; }
 .login__subtitle { font: var(--font-caption); color: var(--text-secondary); text-align: center; }
 
+/* Formulaire PIN */
 .login__form {
   display: flex; flex-direction: column;
   align-items: center; gap: 20px;
   width: 100%;
 }
 .login__label { font: var(--font-label); color: var(--text-secondary); }
-.login__error { font: var(--font-caption); color: var(--danger); font-weight: 500; }
+.login__error { font: var(--font-caption); color: var(--danger); font-weight: 500; min-height: 1.2em; }
 
+/* 4 points PIN */
 .pin-display {
-  display: flex; gap: 12px;
+  display: flex; gap: 16px;
 }
 .pin-dot {
-  width: 16px; height: 16px;
+  width: 18px; height: 18px;
   border-radius: 50%;
   border: 2px solid var(--border);
   transition: all .15s;
@@ -708,6 +765,7 @@ body {
 }
 .pin-dot.error { background: var(--danger); border-color: var(--danger); }
 
+/* Clavier numérique visuel */
 .pin-keyboard {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -724,20 +782,178 @@ body {
   color: var(--text-primary);
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  transition: background .1s, transform .1s;
+  transition: background .12s, transform .1s;
   -webkit-appearance: none;
+  user-select: none;
 }
 .pin-key:active { background: var(--border); transform: scale(.94); }
+.pin-key:focus-visible { outline: 2px solid var(--nav); outline-offset: 2px; }
 .pin-key--empty { background: transparent; border: none; pointer-events: none; }
 .pin-key--delete { color: var(--text-secondary); }
 
-.login__norton-logo {
-  height: 28px; width: auto;
-  filter: brightness(0) saturate(100%); /* rendu monochrome sombre */
-  opacity: .75;
-  margin-top: -4px;
+/* Bouton connexion (jaune Norton) */
+.login__btn-connect {
+  width: 100%; max-width: 300px;
+  height: 52px;
+  background: #FFC400;
+  border: none;
+  border-radius: var(--r-lg);
+  font: 600 1rem 'Inter', sans-serif;
+  color: #111827;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  transition: opacity .15s, transform .1s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
 }
-.login__version { font: var(--font-caption); color: var(--border); padding-bottom: var(--s-lg); }
+.login__btn-connect:active { opacity: .85; transform: scale(.98); }
+
+/* Input caché pour clavier mobile natif */
+#pin-hidden-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 1px; height: 1px;
+  left: -9999px;
+}
+
+.login__version {
+  font: var(--font-caption); color: var(--border);
+  padding-bottom: var(--s-lg);
+}
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE — PC / Tablette (min-width: 768px)
+══════════════════════════════════════════ */
+@media (min-width: 768px) {
+
+  /* ── Layout global : max 1200px centré ── */
+  .app {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  /* ── Topbar pleine largeur dans le container ── */
+  .topbar {
+    border-left: none; border-right: none;
+  }
+
+  /* ── Bottom nav suit le container 1200px ── */
+  .bottom-nav {
+    max-width: 1200px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+  }
+
+  /* ── Visite nav + submit suivent aussi ── */
+  .visite-nav,
+  .visite-submit {
+    max-width: 1200px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  /* ── Screen padding généreux PC ── */
+  .screen {
+    padding: var(--s-xl) clamp(var(--s-xl), 4vw, 64px);
+    gap: var(--s-lg);
+  }
+
+  /* ── Toast centré ── */
+  .toast-container {
+    max-width: 480px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  /* ── LOGIN : 2 panneaux côte à côte ── */
+  .screen--login {
+    flex-direction: row;
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* Panneau branding gauche — bleu */
+  .login__brand-panel {
+    display: flex;
+    flex: 0 0 42%;
+    background: var(--nav);
+    align-items: center;
+    justify-content: center;
+    padding: 48px 40px;
+  }
+  .login__brand-inner {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 28px;
+    text-align: center;
+    max-width: 280px;
+  }
+  .login__norton-hero {
+    height: 44px; width: auto;
+    filter: brightness(0) invert(1);
+    opacity: .95;
+  }
+  .login__brand-divider {
+    width: 40px; height: 3px;
+    background: #FFC400;
+    border-radius: 2px;
+  }
+  .login__brand-ism {
+    font-size: 0.65rem; font-weight: 800;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: rgba(255,255,255,0.6);
+  }
+  .login__brand-title {
+    font-size: 1.5rem; font-weight: 800;
+    color: #FFFFFF; letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
+  .login__brand-title span { color: #FFC400; }
+  .login__brand-sub {
+    font-size: 0.78rem; color: rgba(255,255,255,0.55);
+    line-height: 1.5;
+  }
+
+  /* Panneau formulaire droit — blanc */
+  .login__form-panel {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    padding: 48px 40px;
+  }
+  .login__form-card {
+    width: 100%;
+    max-width: 380px;
+    min-height: unset;
+    padding: 40px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--r-xl);
+    box-shadow: 0 4px 24px rgba(0,0,0,.06);
+  }
+
+  /* Sur desktop, masquer le logo Norton mobile */
+  .login__norton-hero-mobile { display: none; }
+  .login__ism-divider { display: none; }
+
+  /* Grille 2 colonnes pour les KPI home sur PC */
+  .screen--home .kpi-card { grid-column: span 2; }
+  .home__stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--s-md);
+  }
+
+  /* Pipeline : table plein écran PC */
+  .screen--pipeline .pipeline-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--s-sm);
+  }
+}
 
 /* ── SCREEN: HOME ── */
 .home__greeting {
@@ -898,7 +1114,6 @@ body {
 /* Nav blocs -->
 .visite-nav {
   position: fixed; bottom: 0; left: 0; right: 0;
-  max-width: 480px; margin: 0 auto;
   display: flex; align-items: center; justify-content: space-between;
   padding: 12px 16px;
   background: var(--bg);
@@ -914,7 +1129,6 @@ body {
 
 .visite-submit {
   position: fixed; bottom: 0; left: 0; right: 0;
-  max-width: 480px; margin: 0 auto;
   padding: 12px 16px;
   background: var(--bg);
   border-top: 1.5px solid var(--border);
@@ -1223,9 +1437,9 @@ body {
   color: var(--text-secondary); font-size: 1.25rem;
 }
 
-/* ── RESPONSIVE : tablette (fallback) ── */
-@media (min-width: 481px) {
-  .app { border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
-  .bottom-nav { left: 50%; transform: translateX(-50%); width: 480px; }
-  .toast-container { max-width: 448px; left: 50%; transform: translateX(-50%); }
+/* ── RESPONSIVE : mobile strict (<767px) ── */
+@media (max-width: 767px) {
+  .app { max-width: 100%; }
+  .screen { padding: var(--s-md); }
+  .login__brand-panel { display: none; }
 }

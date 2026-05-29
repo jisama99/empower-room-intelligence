@@ -695,9 +695,24 @@ const Utils = {
 const Screens = {};
 
 /* ── 9.1 LOGIN ── */
+/* ════════════════════════════════════════════
+   AUTH — Authentification PIN 4 chiffres
+   ▸ Clavier visuel (boutons) + clavier natif
+     mobile via input[type=tel] caché
+   ▸ Auto-submit dès le 4e chiffre saisi
+   ▸ PIN injecté dans les query params URL
+     pour compatibilité Apps Script (e.parameter)
+════════════════════════════════════════════ */
 Screens.login = function() {
   let pinBuffer = [];
 
+  // ── Input caché — déclenche le clavier numérique natif iOS/Android ──
+  const hiddenInput = document.getElementById('pin-hidden-input');
+
+  // Focus après stabilisation du DOM (300ms)
+  if (hiddenInput) setTimeout(() => hiddenInput.focus(), 300);
+
+  // ── Met à jour l'affichage des 4 points ──
   function update() {
     document.querySelectorAll('.pin-dot').forEach((dot, i) => {
       dot.classList.toggle('filled', i < pinBuffer.length);
@@ -705,8 +720,10 @@ Screens.login = function() {
     });
   }
 
+  // ── Navigation post-authentification ──
   function _doPostLoginNavigation() {
-    // Log de session côté Apps Script (silencieux, non bloquant)
+    // Log de session côté Apps Script — silencieux, non bloquant
+    // PIN systématiquement dans les query params (auth serveur e.parameter)
     API.call('login', {}, 'POST').catch(() => {});
     if (Auth.isCDS() && !Auth.tutoFait()) {
       Router.navigate('/tuto');
@@ -719,6 +736,7 @@ Screens.login = function() {
     }
   }
 
+  // ── RGPD (inchangé) ──
   function _showRgpdIfNeeded(callback) {
     if (localStorage.getItem('rgpd_ok')) { callback(); return; }
     const modal = document.getElementById('modal-rgpd');
@@ -730,40 +748,71 @@ Screens.login = function() {
       callback();
     }, { once: true });
     document.getElementById('btn-rgpd-decline')?.addEventListener('click', () => {
-      // Accès accordé mais géoloc/audio désactivés (flag pour les blocs concernés)
+      // Accès accordé mais géoloc/audio désactivés
       localStorage.setItem('rgpd_ok', 'partial');
       modal.classList.add('hidden');
       callback();
     }, { once: true });
   }
 
+  // ── Tentative de connexion — vérifie 4 chiffres ──
   function tryLogin() {
+    if (pinBuffer.length !== 4) return;
+    // Réinitialise l'input caché pour sécurité
+    if (hiddenInput) hiddenInput.value = '';
+
     const pin = pinBuffer.join('');
     if (Auth.login(parseInt(pin, 10))) {
       _showRgpdIfNeeded(_doPostLoginNavigation);
     } else {
+      // Feedback erreur visuel + reset
       document.querySelectorAll('.pin-dot').forEach(d => d.classList.add('error'));
       document.getElementById('login-error').classList.remove('hidden');
       pinBuffer = [];
       setTimeout(() => {
-        document.querySelectorAll('.pin-dot').forEach(d => d.classList.remove('error','filled'));
+        document.querySelectorAll('.pin-dot').forEach(d => d.classList.remove('error', 'filled'));
         document.getElementById('login-error').classList.add('hidden');
+        // Remettre le focus sur l'input mobile
+        if (hiddenInput) hiddenInput.focus();
       }, 1200);
     }
   }
 
+  // ── Écoute de l'input caché (clavier mobile natif) ──
+  if (hiddenInput) {
+    hiddenInput.addEventListener('input', () => {
+      // Ne garder que les chiffres, max 4
+      const digits = hiddenInput.value.replace(/\D/g, '').slice(0, 4);
+      hiddenInput.value = digits;
+      pinBuffer = digits.split('');
+      update();
+      if (pinBuffer.length === 4) setTimeout(tryLogin, 80);
+    });
+  }
+
+  // ── Clavier visuel (boutons numériques) ──
   document.querySelectorAll('.pin-key[data-digit]').forEach(btn => {
     btn.addEventListener('click', () => {
-      if (pinBuffer.length >= 6) return;
+      if (pinBuffer.length >= 4) return;
       pinBuffer.push(btn.dataset.digit);
+      // Synchronise l'input caché
+      if (hiddenInput) hiddenInput.value = pinBuffer.join('');
       update();
-      if (pinBuffer.length === 6) setTimeout(tryLogin, 100);
+      if (pinBuffer.length === 4) setTimeout(tryLogin, 80);
     });
   });
 
+  // ── Touche effacement ──
   document.getElementById('pin-delete')?.addEventListener('click', () => {
-    pinBuffer.pop(); update();
+    pinBuffer.pop();
+    if (hiddenInput) hiddenInput.value = pinBuffer.join('');
+    update();
     document.getElementById('login-error').classList.add('hidden');
+  });
+
+  // ── Clic sur les dots → focus input mobile ──
+  document.getElementById('pin-display')?.addEventListener('click', () => {
+    if (hiddenInput) hiddenInput.focus();
   });
 };
 

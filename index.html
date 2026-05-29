@@ -122,52 +122,97 @@
 <!-- ── LOGIN ── -->
 <template id="tpl-login">
   <section class="screen screen--login">
-    <div class="login__header">
-      <div class="login__logo">
-        <div class="login__logo-inner">
-          <span class="login__logo-text">E</span>
+
+    <!-- ══ PANNEAU GAUCHE : BRANDING (desktop uniquement) ══ -->
+    <div class="login__brand-panel">
+      <div class="login__brand-inner">
+        <!-- Logo Norton blanc sur fond bleu -->
+        <img src="icons/norton-logo.png" alt="Norton" class="login__norton-hero" />
+        <div class="login__brand-divider"></div>
+        <p class="login__brand-ism">Impact Sales Marketing</p>
+        <h2 class="login__brand-title">
+          <span>EMPOWER</span><br/>Room Intelligence
+        </h2>
+        <p class="login__brand-sub">
+          Force de vente terrain<br/>
+          Norton × Gen Digital · FY27
+        </p>
+      </div>
+    </div>
+
+    <!-- ══ PANNEAU DROIT : FORMULAIRE PIN ══ -->
+    <div class="login__form-panel">
+      <div class="login__form-card">
+
+        <!-- En-tête (mobile : logo + Norton + ISM) -->
+        <div class="login__header">
+          <div class="login__logo">
+            <div class="login__logo-inner">
+              <span class="login__logo-text">E</span>
+            </div>
+          </div>
+          <!-- Logo Norton visible uniquement mobile -->
+          <img src="icons/norton-logo.png" alt="Norton" class="login__norton-hero-mobile" />
+          <h1 class="login__title">EMPOWER RI</h1>
+          <!-- Séparateur "IMPACT SALES MARKETING" mobile -->
+          <div class="login__ism-divider">
+            <span class="login__ism-text">Impact Sales Marketing × Norton</span>
+          </div>
         </div>
+
+        <!-- Input type=tel caché — déclenche clavier numérique natif iOS/Android -->
+        <input
+          type="tel"
+          id="pin-hidden-input"
+          inputmode="numeric"
+          pattern="[0-9]*"
+          maxlength="4"
+          autocomplete="one-time-code"
+          aria-hidden="true"
+          tabindex="-1"
+        />
+
+        <!-- Formulaire PIN -->
+        <div class="login__form">
+          <p class="login__label">Entrez votre code PIN à 4 chiffres</p>
+
+          <!-- 4 points -->
+          <div class="pin-display" id="pin-display" role="status" aria-live="polite" aria-label="Saisie PIN">
+            <span class="pin-dot" data-idx="0"></span>
+            <span class="pin-dot" data-idx="1"></span>
+            <span class="pin-dot" data-idx="2"></span>
+            <span class="pin-dot" data-idx="3"></span>
+          </div>
+
+          <p id="login-error" class="login__error hidden" role="alert">PIN incorrect. Réessayez.</p>
+
+          <!-- Clavier numérique visuel -->
+          <div class="pin-keyboard">
+            <button class="pin-key" data-digit="1" type="button">1</button>
+            <button class="pin-key" data-digit="2" type="button">2</button>
+            <button class="pin-key" data-digit="3" type="button">3</button>
+            <button class="pin-key" data-digit="4" type="button">4</button>
+            <button class="pin-key" data-digit="5" type="button">5</button>
+            <button class="pin-key" data-digit="6" type="button">6</button>
+            <button class="pin-key" data-digit="7" type="button">7</button>
+            <button class="pin-key" data-digit="8" type="button">8</button>
+            <button class="pin-key" data-digit="9" type="button">9</button>
+            <button class="pin-key pin-key--empty" type="button" aria-hidden="true" tabindex="-1"></button>
+            <button class="pin-key" data-digit="0" type="button">0</button>
+            <button class="pin-key pin-key--delete" id="pin-delete" aria-label="Supprimer dernier chiffre" type="button">
+              <svg viewBox="0 0 24 24" fill="none" width="20" height="20" aria-hidden="true">
+                <path d="M21 4H8L1 12l7 8h13a2 2 0 002-2V6a2 2 0 00-2-2z" stroke="currentColor" stroke-width="2"/>
+                <line x1="18" y1="9" x2="12" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <line x1="12" y1="9" x2="18" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <p class="login__version">v4.1 — FY27 · Norton × ISM</p>
       </div>
-      <h1 class="login__title">EMPOWER ROOM INTELLIGENCE</h1>
-      <img src="icons/norton-logo.png" alt="Norton" class="login__norton-logo" />
-      <p class="login__subtitle">Impact Sales Marketing × Norton / Gen Digital</p>
     </div>
 
-    <div class="login__form">
-      <p class="login__label">Entrez votre PIN</p>
-      <div class="pin-display" id="pin-display">
-        <span class="pin-dot" data-idx="0"></span>
-        <span class="pin-dot" data-idx="1"></span>
-        <span class="pin-dot" data-idx="2"></span>
-        <span class="pin-dot" data-idx="3"></span>
-        <span class="pin-dot" data-idx="4"></span>
-        <span class="pin-dot" data-idx="5"></span>
-      </div>
-      <p id="login-error" class="login__error hidden">PIN incorrect. Réessayez.</p>
-
-      <div class="pin-keyboard">
-        <button class="pin-key" data-digit="1">1</button>
-        <button class="pin-key" data-digit="2">2</button>
-        <button class="pin-key" data-digit="3">3</button>
-        <button class="pin-key" data-digit="4">4</button>
-        <button class="pin-key" data-digit="5">5</button>
-        <button class="pin-key" data-digit="6">6</button>
-        <button class="pin-key" data-digit="7">7</button>
-        <button class="pin-key" data-digit="8">8</button>
-        <button class="pin-key" data-digit="9">9</button>
-        <button class="pin-key pin-key--empty"></button>
-        <button class="pin-key" data-digit="0">0</button>
-        <button class="pin-key pin-key--delete" id="pin-delete" aria-label="Supprimer">
-          <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-            <path d="M21 4H8L1 12l7 8h13a2 2 0 002-2V6a2 2 0 00-2-2z" stroke="currentColor" stroke-width="2"/>
-            <line x1="18" y1="9" x2="12" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <line x1="12" y1="9" x2="18" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-        </button>
-      </div>
-    </div>
-
-    <p class="login__version">v4.1 — FY27</p>
   </section>
 </template>
 
