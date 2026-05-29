@@ -479,15 +479,83 @@ const API = {
 
   // ── IMPORT CA ────────────────────────────
   /**
-   * importCA
-   * Permet à Alexandra (2000) et au manager (1000) d'importer
-   * un CA pour un compte donné (CA_Import_Total).
-   * Journalisé dans LOGS (PIN + timestamp + action).
+   * importCA — montant unique compte
    */
   async importCA(compteId, montant, quarter) {
     if (!Auth.isManager()) throw new Error('Unauthorized — import CA réservé à 1000/2000');
     if (!compteId || montant <= 0) throw new Error('compteId et montant requis');
     return API.call('importCA', { compte_id: compteId, montant, quarter: quarter || CONFIG.QUARTER_ACTIF }, 'POST');
+  },
+
+  // ── IMPORT EXCEL / CSV (Bug #3) ───────────────
+  /**
+   * importLeadsFile — parse fichier .xlsx/.xls/.csv côté client via FileReader
+   * puis pousse le contenu raw vers Apps Script (action=importLeadsCSV)
+   * Transport : POST text/plain + PIN dans query params (pas de preflight CORS)
+   */
+  importLeadsFile(file) {
+    return new Promise((resolve, reject) => {
+      if (!file) return reject(new Error('Aucun fichier sélectionné'));
+      const allowedTypes = ['application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'text/csv', 'application/csv', ''];
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (!['xlsx', 'xls', 'csv'].includes(ext)) {
+        return reject(new Error('Format non supporté — .xlsx, .xls ou .csv requis'));
+      }
+
+      const reader = new FileReader();
+
+      reader.onload = async (e) => {
+        try {
+          let rows = [];
+
+          if (ext === 'csv') {
+            // ── Parsing CSV natif ──
+            const text  = e.target.result;
+            const lines = text.split(/\r?\n/).filter(l => l.trim());
+            if (lines.length < 2) return reject(new Error('Fichier CSV vide ou sans données'));
+            const sep = lines[0].includes(';') ? ';' : ',';
+            const headers = lines[0].split(sep).map(h => h.trim().replace(/"/g,''));
+            rows = lines.slice(1).map(line => {
+              const vals = line.split(sep).map(v => v.trim().replace(/"/g,''));
+              const obj  = {};
+              headers.forEach((h, i) => { obj[h] = vals[i] ?? ''; });
+              return obj;
+            });
+          } else {
+            // ── Pour xlsx/xls : envoi raw base64 vers Apps Script qui gère le parsing ──
+            const base64 = e.target.result.split(',')[1];
+            const result = await API.call('importLeadsCSV', {
+              format:   ext,
+              content:  base64,
+              filename: file.name,
+            }, 'POST');
+            return resolve(result);
+          }
+
+          // CSV : envoi JSON rows
+          const result = await API.call('importLeadsCSV', {
+            format:   'csv',
+            rows:     rows,
+            filename: file.name,
+            count:    rows.length,
+          }, 'POST');
+          resolve(result);
+
+        } catch(err) {
+          reject(err);
+        }
+      };
+
+      reader.onerror = () => reject(new Error('Erreur lecture fichier'));
+
+      if (ext === 'csv') {
+        reader.readAsText(file, 'UTF-8');
+      } else {
+        reader.readAsDataURL(file); // base64 pour xlsx
+      }
+    });
   },
 
   // ── NSB ──────────────────────────────────
@@ -582,23 +650,36 @@ const UI = {
     finally   { this.hideLoader(); }
   },
 
-  /** Génère une card compte pour la liste pipeline */
+  /** Génère une card compte pour la liste pipeline — null-safe (Bug #1) */
   renderCompteCard(compte) {
+    if (!compte) return document.createElement('div');
+    // Défenses : chaque champ peut être null/undefined si cellule vide en Sheet
+    const nom      = compte.nom      || '—';
+    const ville    = compte.ville    || '—';
+    const segment  = compte.segment  || '—';
+    const statut   = compte.statut   || 'A_contacter';
+    const priorite = compte.priorite || 'Orange';
+    const empower  = compte.empower  || 'NON';
+    const score    = compte.score    != null ? compte.score : 0;
+    const caTerrain= isFinite(compte.ca_terrain) ? compte.ca_terrain : 0;
+    const caImport = isFinite(compte.ca_import)  ? compte.ca_import  : 0;
+
     const div = document.createElement('div');
-    div.className = `compte-card${compte.statut === 'Bloqué' ? ' compte-card--blocked' : ''}`;
+    div.className = `compte-card${statut === 'Bloqué' ? ' compte-card--blocked' : ''}`;
     div.innerHTML = `
       <div class="compte-card__top">
         <div>
-          <p class="compte-card__nom">${Utils.esc(compte.nom)}</p>
-          <p class="compte-card__meta">${Utils.esc(compte.ville)} — ${Utils.esc(compte.segment)}</p>
+          <p class="compte-card__nom">${Utils.esc(nom)}</p>
+          <p class="compte-card__meta">${Utils.esc(ville)} — ${Utils.esc(segment)}</p>
         </div>
-        <span class="chip-priorite chip-priorite--${compte.priorite}">${compte.priorite}</span>
+        <span class="chip-priorite chip-priorite--${priorite}">${priorite}</span>
       </div>
       <div class="compte-card__badges">
-        <span class="chip-statut chip-statut--${compte.statut}">${compte.statut.replace(/_/g,' ')}</span>
-        ${compte.empower !== 'NON' ? `<span class="chip chip--small">⭐ EMPOWER</span>` : ''}
+        <span class="chip-statut chip-statut--${statut}">${statut.replace(/_/g,' ')}</span>
+        ${empower !== 'NON' ? `<span class="chip chip--small">⭐ EMPOWER</span>` : ''}
+        ${compte.flag_nsb ? `<span class="chip chip--small chip--nsb">NSB</span>` : ''}
       </div>
-      <div class="compte-card__ca">CA : ${Utils.formatEur(compte.ca_terrain + compte.ca_import)} | Score : ${compte.score}/100</div>
+      <div class="compte-card__ca">CA : ${Utils.formatEur(caTerrain + caImport)} | Score : ${score}/100</div>
     `;
     div.addEventListener('click', () => Router.navigate('/compte', { id: compte.id }));
     return div;
@@ -778,15 +859,27 @@ Screens.login = function() {
     }
   }
 
-  // ── Écoute de l'input caché (clavier mobile natif) ──
+  // ── Bug #5 : Écoute input caché (clavier mobile natif) ──
   if (hiddenInput) {
     hiddenInput.addEventListener('input', () => {
-      // Ne garder que les chiffres, max 4
       const digits = hiddenInput.value.replace(/\D/g, '').slice(0, 4);
       hiddenInput.value = digits;
       pinBuffer = digits.split('');
       update();
       if (pinBuffer.length === 4) setTimeout(tryLogin, 80);
+    });
+
+    // Backspace physique (keydown) — éteint les dots en temps réel
+    hiddenInput.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' || e.key === 'Delete') {
+        if (pinBuffer.length > 0) {
+          pinBuffer.pop();
+          hiddenInput.value = pinBuffer.join('');
+          update();
+          document.getElementById('login-error').classList.add('hidden');
+        }
+        e.preventDefault();
+      }
     });
   }
 
@@ -795,14 +888,13 @@ Screens.login = function() {
     btn.addEventListener('click', () => {
       if (pinBuffer.length >= 4) return;
       pinBuffer.push(btn.dataset.digit);
-      // Synchronise l'input caché
       if (hiddenInput) hiddenInput.value = pinBuffer.join('');
       update();
       if (pinBuffer.length === 4) setTimeout(tryLogin, 80);
     });
   });
 
-  // ── Touche effacement ──
+  // ── Bug #5 : Touche effacement — sync dots temps réel ──
   document.getElementById('pin-delete')?.addEventListener('click', () => {
     pinBuffer.pop();
     if (hiddenInput) hiddenInput.value = pinBuffer.join('');
@@ -810,7 +902,17 @@ Screens.login = function() {
     document.getElementById('login-error').classList.add('hidden');
   });
 
-  // ── Clic sur les dots → focus input mobile ──
+  // ── Bug #5 : TOUTE la zone login__form-card ouvre le clavier mobile ──
+  // Le clic n'importe où autour des dots force le focus sur l'input caché
+  const formCard = document.querySelector('.login__form-card');
+  if (formCard && hiddenInput) {
+    formCard.addEventListener('click', e => {
+      // Ignorer les clics sur les boutons du clavier (ils ont leur propre handler)
+      if (e.target.closest('.pin-key') || e.target.closest('#pin-delete')) return;
+      hiddenInput.focus();
+    });
+  }
+  // Focus direct sur pin-display
   document.getElementById('pin-display')?.addEventListener('click', () => {
     if (hiddenInput) hiddenInput.focus();
   });
@@ -953,6 +1055,20 @@ Screens.compte = async function(params) {
     Router.navigate('/pipeline');
     return;
   }
+
+  // ── Défenses null-safe (Bug #1) — colonnes Sheets peuvent être vides ──
+  compte.nom             = compte.nom              || '—';
+  compte.ville           = compte.ville            || '—';
+  compte.statut          = compte.statut           || 'A_contacter';
+  compte.priorite        = compte.priorite         || 'Orange';
+  compte.segment         = compte.segment          || '—';
+  compte.siret           = compte.siret            || '—';
+  compte.empower         = compte.empower          || 'NON';
+  compte.score           = compte.score            != null ? compte.score : 0;
+  compte.ca_terrain      = isFinite(compte.ca_terrain) ? compte.ca_terrain : 0;
+  compte.ca_import       = isFinite(compte.ca_import)  ? compte.ca_import  : 0;
+  compte.prochaine_action= compte.prochaine_action || '—';
+  compte.origine         = compte.origine          || '—';
 
   // Header
   document.getElementById('compte-nom').textContent   = compte.nom;
@@ -1260,26 +1376,72 @@ Screens.visite = function(params) {
     }
   });
 
-  // ── BLOC 9 : Photo ──
-  document.getElementById('btn-prendre-photo')?.addEventListener('click', () => {
-    document.getElementById('input-photo').click();
-  });
-  document.getElementById('btn-importer-photo')?.addEventListener('click', () => {
-    const inp = document.getElementById('input-photo');
-    inp.removeAttribute('capture');
-    inp.click();
-  });
-  document.getElementById('input-photo')?.addEventListener('change', function() {
-    const file = this.files[0];
-    if (!file) return;
+  // ── BLOC 9 : Photo terrain — Bug #4 : camera native + compression Base64 ──
+
+  /**
+   * Compresse une image Data URL via canvas
+   * @param {string} dataUrl  — result de FileReader.readAsDataURL
+   * @param {number} maxPx    — dimension max (px), défaut 1200
+   * @param {number} quality  — qualité JPEG 0-1, défaut 0.75
+   * @returns {Promise<string>} — data URL compressée
+   */
+  function _compressImage(dataUrl, maxPx = 1200, quality = 0.75) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxPx || height > maxPx) {
+          if (width > height) { height = Math.round(height * maxPx / width); width = maxPx; }
+          else                { width  = Math.round(width  * maxPx / height); height = maxPx; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => resolve(dataUrl); // fallback sans compression
+      img.src = dataUrl;
+    });
+  }
+
+  function _handlePhotoFile(file, preview) {
+    if (!file || !file.type.startsWith('image/')) return;
     const reader = new FileReader();
-    reader.onload = e => {
-      const preview = document.getElementById('photo-preview');
-      document.getElementById('photo-preview-img').src = e.target.result;
-      preview.classList.remove('hidden');
-      data.photo_base64 = e.target.result;
+    reader.onload = async e => {
+      const compressed = await _compressImage(e.target.result, 1200, 0.75);
+      if (preview) {
+        document.getElementById('photo-preview-img').src = compressed;
+        preview.classList.remove('hidden');
+      }
+      data.photo_base64 = compressed;
+      // Taille estimée en Ko pour feedback
+      const sizeKo = Math.round((compressed.length * 3/4) / 1024);
+      UI.toast(`📸 Photo prête — ${sizeKo} Ko`, 'success');
     };
     reader.readAsDataURL(file);
+  }
+
+  // Bouton "Prendre une photo" → caméra native (capture=camera)
+  document.getElementById('btn-prendre-photo')?.addEventListener('click', () => {
+    const inp = document.getElementById('input-photo-camera');
+    if (inp) { inp.value = ''; inp.click(); }
+  });
+  document.getElementById('input-photo-camera')?.addEventListener('change', function() {
+    _handlePhotoFile(this.files[0], document.getElementById('photo-preview'));
+  });
+
+  // Bouton "Importer depuis galerie" → sans capture
+  document.getElementById('btn-importer-photo')?.addEventListener('click', () => {
+    const inp = document.getElementById('input-photo-gallery');
+    if (inp) { inp.value = ''; inp.click(); }
+  });
+  document.getElementById('input-photo-gallery')?.addEventListener('change', function() {
+    _handlePhotoFile(this.files[0], document.getElementById('photo-preview'));
+  });
+
+  // Legacy — input-photo ancienne référence (compatibility)
+  document.getElementById('input-photo')?.addEventListener('change', function() {
+    _handlePhotoFile(this.files[0], document.getElementById('photo-preview'));
   });
 
   // Note privée : visible CDS + PIN 1000
@@ -1574,9 +1736,26 @@ Screens.visite = function(params) {
       data.clientele        = collectChipsGroup('chips-clientele');
       data.canal            = collectChipsGroup('chips-canal');
     }
-    if (n === 3) data.objectifs = collectChipsGroup('chips-objectifs');
+    // ── Bug #6 : Objectifs — sérialisation JSON complète vers colonne ACTIONS ──
+    if (n === 3) {
+      // Chips multi-select objectifs (labels)
+      const objChips = collectChipsGroup('chips-objectifs');
+
+      // Cases à cocher objectifs (si présentes dans le DOM)
+      const objChecked = collectChecklist('checklist-objectifs');
+
+      // Union des deux : chips sélectionnés + cases cochées
+      const objAll = [...new Set([...objChips, ...objChecked])].filter(Boolean);
+
+      data.objectifs = objAll;                              // array pour lecture
+      data.objectifs_json = JSON.stringify(objAll);         // JSON string pour colonne ACTIONS
+      // Résumé lisible pour audit/export
+      data.objectifs_label = objAll.join(' | ') || 'Non défini';
+    }
     if (n === 4) {
-      data.checklist_norton  = collectChecklist('checklist-norton');
+      const checklistNorton  = collectChecklist('checklist-norton');
+      data.checklist_norton      = checklistNorton;
+      data.checklist_norton_json = JSON.stringify(checklistNorton); // sérialisé → colonne ACTIONS
       data.empower_interet   = collectChipsGroup('chips-empower-interet', true);
       data.empower_raison    = collectChipsGroup('chips-empower-raison', true);
       data.portails_actifs   = document.getElementById('v-portails')?.value;
@@ -1791,18 +1970,78 @@ Screens.copil = async function() {
     teamList.appendChild(card);
   }
 
-  // Bonus manager : inséré dans DOM uniquement PIN 1000
+  // ── Bug #2 : PIN 1000 Super-User — Bonus manager + Vue commerciale personnelle ──
   if (Auth.isPin1000()) {
+    // ── Bonus manager collectif ──
     const bonus = document.createElement('div');
     bonus.className = 'bonus-manager-card';
-    // Calcul collectif : CDS Obj=0 exclus
-    const totReel = 120; // simulé %
+    const totReel = 120; // simulé
     const montant = totReel >= 100 ? 300 : 0;
     bonus.innerHTML = `
       <div class="bonus-manager-card__title">🏆 Bonus Manager — Collectif Q${CONFIG.QUARTER_ACTIF}</div>
       <div class="bonus-manager-card__val">${montant}€</div>
       <p class="text-muted" style="font-size:.75rem">Atteinte collective : ${totReel}% — Seuil : 100%</p>`;
     teamList.insertAdjacentElement('afterend', bonus);
+
+    // ── Vue commerciale personnelle de Tadjidine (CDS_Attribué = 1000) ──
+    const sectionMgr = document.createElement('section');
+    sectionMgr.className = 'card';
+    sectionMgr.style.cssText = 'margin-top:16px;padding:16px;';
+    sectionMgr.innerHTML = `
+      <div class="section-header" style="margin-bottom:12px;">
+        <span class="section-header__title">📋 Mes comptes (Tadjidine)</span>
+        <button class="btn btn--secondary btn--sm" id="btn-mes-comptes-visite">+ Visite</button>
+      </div>
+      <div id="mes-comptes-list"><div class="loader-spinner loader-spinner--sm"></div></div>`;
+    bonus.insertAdjacentElement('afterend', sectionMgr);
+
+    // Charger les comptes du manager (CDS = 1000)
+    try {
+      const mesComptes = await API.call('getComptes', { pin: 1000, cds_filter: 1000 });
+      const listEl = document.getElementById('mes-comptes-list');
+      if (!listEl) return;
+      const arr = Array.isArray(mesComptes) ? mesComptes : (mesComptes?.data || []);
+      if (arr.length === 0) {
+        listEl.innerHTML = '<p class="text-muted" style="font-size:.8rem;padding:8px 0;">Aucun compte attribué.</p>';
+      } else {
+        listEl.innerHTML = '';
+        // Afficher max 5, avec lien "Voir tout dans Pipeline"
+        arr.slice(0, 5).forEach(c => {
+          // Null-safe
+          const statut   = c.statut   || 'A_contacter';
+          const priorite = c.priorite || 'Orange';
+          const nom      = c.nom      || '—';
+          const ville    = c.ville    || '—';
+          const row = document.createElement('div');
+          row.className = 'call-item';
+          row.style.cursor = 'pointer';
+          row.innerHTML = `
+            <div>
+              <p class="call-item__nom" style="font-weight:600">${Utils.esc(nom)}</p>
+              <p class="call-item__meta">${Utils.esc(ville)} · <span class="chip-statut chip-statut--${statut}" style="font-size:.7rem;padding:2px 7px">${statut.replace(/_/g,' ')}</span></p>
+            </div>
+            <span class="chip-priorite chip-priorite--${priorite}" style="font-size:.7rem">${priorite}</span>`;
+          row.addEventListener('click', () => Router.navigate('/compte', { id: c.id }));
+          listEl.appendChild(row);
+        });
+        if (arr.length > 5) {
+          const more = document.createElement('button');
+          more.className = 'btn btn--ghost btn--full';
+          more.style.marginTop = '4px';
+          more.textContent = `Voir tous mes comptes (${arr.length})`;
+          more.addEventListener('click', () => Router.navigate('/pipeline'));
+          listEl.appendChild(more);
+        }
+      }
+    } catch {
+      const listEl = document.getElementById('mes-comptes-list');
+      if (listEl) listEl.innerHTML = '<p class="text-muted" style="font-size:.8rem">Erreur de chargement</p>';
+    }
+
+    document.getElementById('btn-mes-comptes-visite')?.addEventListener('click', () => {
+      STATE.visiteDraft = { source: 'base_historique' };
+      Router.navigate('/visite');
+    });
   }
 
   // Objectifs table
@@ -1905,6 +2144,71 @@ Screens.copil = async function() {
         });
       });
     }
+  }
+
+  // ── Bug #3 : Import Excel/CSV fichier (bouton btn-import-ca déclenche input file caché) ──
+  const btnImportCa = document.getElementById('btn-import-ca');
+  const excelInput  = document.getElementById('excel-import');
+  if (btnImportCa && excelInput && Auth.isManager()) {
+    // Choix : modal rapide → saisie manuelle compte/montant OU import fichier
+    btnImportCa.addEventListener('click', () => {
+      const html = `
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <button class="btn btn--primary btn--full" id="btn-import-fichier" type="button">
+            📂 Importer fichier Excel / CSV
+          </button>
+          <div style="text-align:center;font-size:.8rem;color:var(--text-secondary)">— ou saisie manuelle —</div>
+          <div class="form-group">
+            <label class="form-label">ID Compte</label>
+            <input type="text" class="text-input" id="ica-compte" placeholder="ex: C001" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Montant CA importé (€)</label>
+            <input type="number" class="text-input" id="ica-montant" min="1" placeholder="ex: 1200" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Quarter</label>
+            <select class="select-input" id="ica-quarter">
+              <option>Q1</option><option>Q2</option><option>Q3</option><option>Q4</option>
+            </select>
+          </div>
+        </div>`;
+      UI.openModal('Import CA', html, async () => {
+        const compteId = document.getElementById('ica-compte')?.value?.trim();
+        const montant  = parseFloat(document.getElementById('ica-montant')?.value || '0');
+        if (!compteId || montant <= 0) { UI.toast('Données invalides', 'danger'); return; }
+        await API.importCA(compteId, montant, document.getElementById('ica-quarter')?.value || CONFIG.QUARTER_ACTIF);
+        UI.toast('✅ CA importé', 'success');
+        Screens.copil();
+      });
+
+      // Branche le bouton fichier après ouverture de la modale
+      setTimeout(() => {
+        document.getElementById('btn-import-fichier')?.addEventListener('click', () => {
+          document.querySelector('.modal-overlay')?.remove();
+          excelInput.click();
+        });
+      }, 80);
+    });
+
+    // FileReader déclenché au choix de fichier
+    excelInput.addEventListener('change', async function() {
+      const file = this.files[0];
+      if (!file) return;
+      UI.showSpinner(`Lecture de ${file.name}…`);
+      try {
+        const result = await API.importLeadsFile(file);
+        UI.hideSpinner();
+        const nb = result?.imported || result?.count || '?';
+        UI.toast(`✅ ${nb} ligne(s) importée(s) avec succès`, 'success');
+        Screens.copil();
+      } catch(err) {
+        UI.hideSpinner();
+        UI.toast('Erreur import : ' + err.message, 'danger');
+      } finally {
+        this.value = ''; // reset pour permettre re-sélection du même fichier
+      }
+    });
   }
 
   // Lien vers Dashboard Leads Flavie (PIN 2000 + 3000)

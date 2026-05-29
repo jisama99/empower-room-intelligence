@@ -277,32 +277,73 @@ body {
   -webkit-appearance: none;
 }
 .btn:active { transform: scale(.97); }
+/* ── DESIGN SYSTEM STITCH — Boutons terrain ≥48px, contraste cockpit ── */
+/* Toute action principale doit être accessible au pouce en mobilité */
+
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 
 .btn--primary {
-  background: var(--primary);
-  color: var(--text-primary);
-  box-shadow: 0 2px 8px rgba(255,215,0,.35);
+  background: #FFC400;          /* Jaune Norton officiel — fort contraste */
+  color: #111827;
+  font-weight: 700;
+  min-height: 48px;
+  box-shadow: 0 3px 10px rgba(255,196,0,.4);
 }
+.btn--primary:active { background: #E6B000; transform: scale(.98); }
+
 .btn--secondary {
   background: var(--surface);
   color: var(--nav);
-  border: 1.5px solid var(--nav);
+  border: 2px solid var(--nav);
+  min-height: 48px;
+  font-weight: 600;
 }
 .btn--coral {
   background: var(--coral);
   color: #FFF;
-  box-shadow: 0 2px 8px rgba(232,133,106,.35);
+  font-weight: 700;
+  min-height: 48px;
+  box-shadow: 0 3px 10px rgba(232,133,106,.4);
 }
 .btn--ghost {
   background: transparent;
   color: var(--text-secondary);
   border: none;
+  min-height: 44px;
 }
-.btn--full { width: 100%; }
-.btn--flex { flex: 1; }
-.btn--sm   { padding: 8px 16px; font-size: 0.8125rem; border-radius: var(--r-md); }
-.btn--lg   { padding: 16px 24px; font-size: 1rem; }
+.btn--full  { width: 100%; }
+.btn--flex  { flex: 1; }
+/* sm conserve une hauteur tactile minimale de 40px */
+.btn--sm    { padding: 8px 16px; font-size: 0.8125rem; min-height: 40px; border-radius: var(--r-md); }
+.btn--lg    { padding: 16px 28px; font-size: 1.0625rem; min-height: 52px; }
+
+/* ── Bouton visite sticky (coral) — Stitch spec ── */
+.btn--visite-submit {
+  background: var(--coral);
+  color: #FFF;
+  font-weight: 700;
+  width: 100%; min-height: 52px;
+  border-radius: var(--r-lg);
+  font-size: 1rem;
+  border: none; cursor: pointer;
+  transition: background .15s, transform .1s;
+}
+.btn--visite-submit:active { background: #D4735E; transform: scale(.99); }
+
+/* ── Icon buttons (actions rapides) ≥ 44px ── */
+.icon-btn {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 10px 14px;
+  font: 500 0.8125rem 'Inter', sans-serif;
+  color: var(--nav);
+  cursor: pointer;
+  min-height: 44px;
+  transition: background .12s;
+}
+.icon-btn:active { background: var(--border); }
 
 /* ── SECTION HEADER ── */
 .section-header {
@@ -887,22 +928,43 @@ body {
     display: flex; flex-direction: column;
     align-items: center; gap: 28px;
     text-align: center;
-    max-width: 280px;
+    max-width: 300px;
   }
+
+  /* Norton logo — version claire sur fond bleu */
   .login__norton-hero {
-    height: 44px; width: auto;
-    filter: brightness(0) invert(1);
-    opacity: .95;
+    height: 48px; width: auto;
+    max-width: 220px;
+    object-fit: contain;
+    /* La version "light" est blanche nativement.
+       Fallback : si PNG sombre, on l'inverse */
+    filter: brightness(1);
   }
   .login__brand-divider {
     width: 40px; height: 3px;
     background: #FFC400;
     border-radius: 2px;
   }
-  .login__brand-ism {
-    font-size: 0.65rem; font-weight: 800;
-    letter-spacing: 0.18em; text-transform: uppercase;
-    color: rgba(255,255,255,0.6);
+
+  /* Marvesting logo — rendu sur fond bleu */
+  .login__ism-logo-wrap {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 6px;
+  }
+  .login__marvesting-hero {
+    height: 28px; width: auto;
+    max-width: 180px;
+    object-fit: contain;
+    /* Logo rouge/coral sur fond bleu : mix-blend-mode screen
+       rend le fond noir transparent */
+    mix-blend-mode: screen;
+    filter: brightness(1.2);
+  }
+  .login__ism-fallback {
+    display: none; /* visible si img onerror */
+    font-size: 0.6rem; font-weight: 800;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: rgba(255,255,255,0.55);
   }
   .login__brand-title {
     font-size: 1.5rem; font-weight: 800;
@@ -913,6 +975,29 @@ body {
   .login__brand-sub {
     font-size: 0.78rem; color: rgba(255,255,255,0.55);
     line-height: 1.5;
+  }
+
+  /* ── Logos mobile (formulaire droit) ── */
+  .login__logos-mobile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 4px;
+  }
+  .login__norton-hero-mobile {
+    height: 22px; width: auto;
+    object-fit: contain;
+  }
+  .login__logos-sep {
+    width: 1px; height: 20px;
+    background: var(--border);
+  }
+  .login__marvesting-mobile {
+    height: 20px; width: auto;
+    object-fit: contain;
+    mix-blend-mode: multiply; /* fond noir → transparent sur fond blanc */
+    filter: saturate(1.1);
   }
 
   /* Panneau formulaire droit — blanc */

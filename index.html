@@ -126,10 +126,20 @@
     <!-- ══ PANNEAU GAUCHE : BRANDING (desktop uniquement) ══ -->
     <div class="login__brand-panel">
       <div class="login__brand-inner">
-        <!-- Logo Norton blanc sur fond bleu -->
-        <img src="icons/norton-logo.png" alt="Norton" class="login__norton-hero" />
+        <!-- Norton logo blanc sur fond bleu — version light officielle -->
+        <img src="icons/norton-logo-white.png"
+             alt="Norton"
+             class="login__norton-hero"
+             onerror="this.src='icons/norton-logo.png';this.style.filter='brightness(0) invert(1)'" />
         <div class="login__brand-divider"></div>
-        <p class="login__brand-ism">Impact Sales Marketing</p>
+        <!-- Marvesting / Impact Sales Marketing logo -->
+        <div class="login__ism-logo-wrap">
+          <img src="icons/marvesting-logo-rouge.png"
+               alt="Marvesting"
+               class="login__marvesting-hero"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='block'" />
+          <span class="login__ism-fallback">IMPACT SALES MARKETING</span>
+        </div>
         <h2 class="login__brand-title">
           <span>EMPOWER</span><br/>Room Intelligence
         </h2>
@@ -144,21 +154,31 @@
     <div class="login__form-panel">
       <div class="login__form-card">
 
-        <!-- En-tête (mobile : logo + Norton + ISM) -->
+        <!-- En-tête (mobile : logos + ISM) -->
         <div class="login__header">
-          <div class="login__logo">
-            <div class="login__logo-inner">
-              <span class="login__logo-text">E</span>
-            </div>
+          <!-- Logos côte à côte mobile -->
+          <div class="login__logos-mobile">
+            <img src="icons/norton-logo.png"
+                 alt="Norton"
+                 class="login__norton-hero-mobile"
+                 onerror="this.style.filter='brightness(0)';this.style.opacity='.85'" />
+            <div class="login__logos-sep"></div>
+            <img src="icons/marvesting-logo-rouge.png"
+                 alt="Marvesting"
+                 class="login__marvesting-mobile"
+                 onerror="this.style.display='none'" />
           </div>
-          <!-- Logo Norton visible uniquement mobile -->
-          <img src="icons/norton-logo.png" alt="Norton" class="login__norton-hero-mobile" />
           <h1 class="login__title">EMPOWER RI</h1>
-          <!-- Séparateur "IMPACT SALES MARKETING" mobile -->
           <div class="login__ism-divider">
-            <span class="login__ism-text">Impact Sales Marketing × Norton</span>
+            <span class="login__ism-text">Force de vente Norton · FY27</span>
           </div>
         </div>
+
+        <!-- Input Excel import (caché — déclenché par btn-import-ca) -->
+        <input type="file" id="excel-import" accept=".xlsx,.xls,.csv" style="display:none;" />
+        <!-- Input photo terrain natif -->
+        <input type="file" id="input-photo-camera" accept="image/*" capture="camera" style="display:none;" />
+        <input type="file" id="input-photo-gallery" accept="image/*" style="display:none;" />
 
         <!-- Input type=tel caché — déclenche clavier numérique natif iOS/Android -->
         <input
@@ -632,20 +652,59 @@
         </div>
       </div>
 
-      <!-- BLOC 3 — Objectifs visite -->
+      <!-- BLOC 3 — Objectifs visite (Bug #6 : chips + checklist sérialisés JSON) -->
       <div class="visite-bloc hidden" id="bloc-3">
         <h3 class="visite-bloc__title">🎯 Objectifs de la visite</h3>
-        <div class="chips-group chips-group--multi" id="chips-objectifs" data-key="objectifs">
-          <button class="chip chip--coral-select" data-val="Présentation Norton/EMPOWER">Présentation Norton/EMPOWER</button>
-          <button class="chip chip--coral-select" data-val="Prise de commande">Prise de commande</button>
-          <button class="chip chip--coral-select" data-val="Onboarding EMPOWER">Onboarding EMPOWER</button>
-          <button class="chip chip--coral-select" data-val="Formation produit">Formation produit</button>
-          <button class="chip chip--coral-select" data-val="Welcome Pack">Welcome Pack</button>
-          <button class="chip chip--coral-select" data-val="Suivi commande">Suivi commande</button>
-          <button class="chip chip--coral-select" data-val="Audit sécurité">Audit sécurité</button>
-          <button class="chip chip--coral-select" data-val="Fidélisation">Fidélisation</button>
-          <button class="chip chip--coral-select" data-val="Prospection 1er contact">Prospection 1er contact</button>
-          <button class="chip chip--coral-select" data-val="Autre">Autre</button>
+
+        <!-- Chips multi-select (sélection rapide) -->
+        <div class="chips-group chips-group--multi" id="chips-objectifs" data-key="objectifs" style="margin-bottom:16px;">
+          <button class="chip chip--coral-select" data-val="Présentation Norton/EMPOWER" type="button">Présentation Norton/EMPOWER</button>
+          <button class="chip chip--coral-select" data-val="Prise de commande" type="button">Prise de commande</button>
+          <button class="chip chip--coral-select" data-val="Onboarding EMPOWER" type="button">Onboarding EMPOWER</button>
+          <button class="chip chip--coral-select" data-val="Formation produit" type="button">Formation produit</button>
+          <button class="chip chip--coral-select" data-val="Welcome Pack" type="button">Welcome Pack</button>
+          <button class="chip chip--coral-select" data-val="Suivi commande" type="button">Suivi commande</button>
+          <button class="chip chip--coral-select" data-val="Audit sécurité" type="button">Audit sécurité</button>
+          <button class="chip chip--coral-select" data-val="Fidélisation" type="button">Fidélisation</button>
+          <button class="chip chip--coral-select" data-val="Prospection 1er contact" type="button">Prospection 1er contact</button>
+          <button class="chip chip--coral-select" data-val="Autre" type="button">Autre</button>
+        </div>
+
+        <!-- Checklist Objectifs validés — sérialisée en JSON → colonne Objectifs_Validés_JSON dans ACTIONS -->
+        <p class="form-label" style="margin-bottom:8px;font-weight:600;">Objectifs validés lors de la visite :</p>
+        <div class="checklist" id="checklist-objectifs">
+          <label class="check-item">
+            <input type="checkbox" value="Présentation réalisée" />
+            <span>Présentation Norton/EMPOWER réalisée</span>
+          </label>
+          <label class="check-item">
+            <input type="checkbox" value="Commande prise" />
+            <span>Commande prise</span>
+          </label>
+          <label class="check-item">
+            <input type="checkbox" value="EMPOWER démontré" />
+            <span>Démo EMPOWER effectuée</span>
+          </label>
+          <label class="check-item">
+            <input type="checkbox" value="Formation faite" />
+            <span>Formation produit réalisée</span>
+          </label>
+          <label class="check-item">
+            <input type="checkbox" value="Welcome Pack remis" />
+            <span>Welcome Pack remis au revendeur</span>
+          </label>
+          <label class="check-item">
+            <input type="checkbox" value="Flyer laissé" />
+            <span>Flyer/documentation laissé</span>
+          </label>
+          <label class="check-item">
+            <input type="checkbox" value="RDV de suivi fixé" />
+            <span>RDV de suivi fixé</span>
+          </label>
+          <label class="check-item">
+            <input type="checkbox" value="Contact direct obtenu" />
+            <span>Contact direct (tel/email) obtenu</span>
+          </label>
         </div>
       </div>
 
