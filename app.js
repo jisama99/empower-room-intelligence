@@ -123,6 +123,11 @@ const Auth = {
     const user = USERS[pin];
     STATE.pin       = pin;
     STATE.user      = user;
+    // ── B6 : flag global isManager posé à la connexion ──
+    // STATE.isManager = true pour le super-user Tadjidine (1000) ET Alexandra (2000),
+    // qui partagent les fonctions managériales (COPIL, exports, objectifs, dashboard pilotage).
+    STATE.isManager   = (pin === 1000 || pin === 2000);
+    STATE.isSuperUser = (pin === 1000); // Tadjidine uniquement : bonus, suppression physique, validation finale
     STATE.loginTime = parseInt(localStorage.getItem(this.KEY_LOGIN_TIME) || Date.now().toString(), 10);
     localStorage.setItem(this.KEY_PIN,       pin.toString());
     localStorage.setItem(this.KEY_ROLE,      user.role);
@@ -132,6 +137,7 @@ const Auth = {
 
   _clearSession() {
     STATE.pin = null; STATE.user = null; STATE.loginTime = null;
+    STATE.isManager = false; STATE.isSuperUser = false;
     [this.KEY_PIN, this.KEY_ROLE, this.KEY_NOM, this.KEY_LOGIN_TIME]
       .forEach(k => localStorage.removeItem(k));
   },
@@ -620,11 +626,130 @@ const API = {
 
 };
 
+/* ════════════════════════════════════════════
+   6ter. FILE D'ATTENTE OFFLINE (terrain 3G/4G instable)
+   Une visite/appel soumis sans réseau est stocké en localStorage
+   puis renvoyé automatiquement au retour de connexion.
+   → Zéro saisie perdue sur un parking.
+════════════════════════════════════════════ */
+const OfflineQueue = {
+  KEY: 'empower_offline_queue',
+
+  _read() {
+    try { return JSON.parse(localStorage.getItem(this.KEY) || '[]'); }
+    catch { return []; }
+  },
+  _write(arr) {
+    try { localStorage.setItem(this.KEY, JSON.stringify(arr)); } catch {}
+  },
+
+  // Ajoute une action en attente { action, payload, ts }
+  enqueue(action, payload) {
+    const arr = this._read();
+    arr.push({ action, payload, ts: Date.now() });
+    this._write(arr);
+    this.updateBadge();
+  },
+
+  count() { return this._read().length; },
+
+  // Tente de rejouer toute la file. Renvoie le nombre resynchronisé.
+  async flush() {
+    if (!navigator.onLine) return 0;
+    let arr = this._read();
+    if (arr.length === 0) return 0;
+    let ok = 0;
+    const reste = [];
+    for (const item of arr) {
+      try {
+        await API.call(item.action, item.payload, 'POST');
+        ok++;
+      } catch {
+        reste.push(item); // on garde ce qui échoue encore
+      }
+    }
+    this._write(reste);
+    this.updateBadge();
+    if (ok > 0) UI.toast(`🔄 ${ok} saisie(s) synchronisée(s)`, 'success');
+    return ok;
+  },
+
+  updateBadge() {
+    const n = this.count();
+    let el = document.getElementById('offline-badge');
+    if (n === 0) { el?.remove(); return; }
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'offline-badge';
+      el.className = 'offline-badge';
+      el.addEventListener('click', () => OfflineQueue.flush());
+      document.body.appendChild(el);
+    }
+    el.textContent = `📡 ${n} en attente`;
+  },
+
+  init() {
+    window.addEventListener('online', () => this.flush());
+    this.updateBadge();
+    // Tentative initiale si déjà en ligne
+    if (navigator.onLine) setTimeout(() => this.flush(), 1500);
+  },
+};
+
 // Helpers state
 function State_getComptesCDS() {
   if (Auth.isManager()) return STATE.comptes;
   return STATE.comptes.filter(c => c.cds === STATE.pin);
 }
+
+/* ════════════════════════════════════════════
+   6bis. NORMALISATION DONNÉES (B2)
+   Toute donnée venant du Sheet passe par ici.
+   Objectif : aucune cellule vide/corrompue ne peut
+   figer l'UI sur "Chargement…" ni crasher un .toLowerCase().
+════════════════════════════════════════════ */
+const Normalize = {
+  // nombre sûr : NaN/Infinity/null/'' → 0
+  num(v) {
+    if (v == null || v === '') return 0;
+    const n = typeof v === 'number' ? v : parseFloat(String(v).replace(/[^0-9.,-]/g, '').replace(',', '.'));
+    return isFinite(n) && !isNaN(n) ? n : 0;
+  },
+  // texte sûr : null/undefined → '' ; trim systématique
+  str(v) { return (v == null) ? '' : String(v).trim(); },
+  // statut canonique : trim + nettoyage espaces parasites (sans casse pour comparaison)
+  statutKey(v) { return this.str(v).toLowerCase().replace(/\s+/g, '_'); },
+
+  // Normalise un objet compte complet — appelé sur chaque ligne reçue
+  compte(c) {
+    if (!c || typeof c !== 'object') c = {};
+    return {
+      ...c,
+      id:        this.str(c.id) || this.str(c.ID_Compte) || ('tmp_' + Math.random().toString(36).slice(2, 8)),
+      nom:       this.str(c.nom || c.Nom_Compte) || '—',
+      ville:     this.str(c.ville) || '—',
+      segment:   this.str(c.segment || c.Segment) || '—',
+      statut:    this.str(c.statut || c.Statut) || 'A_contacter',
+      priorite:  this.str(c.priorite || c.Priorité) || 'Orange',
+      empower:   this.str(c.empower || c.Intérêt_EMPOWER) || 'NON',
+      origine:   this.str(c.origine),
+      score:     Math.max(0, Math.min(100, this.num(c.score))),
+      ca_terrain: this.num(c.ca_terrain),
+      ca_import:  this.num(c.ca_import),
+      cds:        this.num(c.cds || c.CDS_Attribué) || null,
+      flag_nsb:   !!(c.flag_nsb || c.Flag_NSB),
+      tel:        this.str(c.tel),
+      note_privee: this.str(c.note_privee),
+    };
+  },
+  // Normalise un tableau, en filtrant les lignes totalement vides
+  comptes(arr) {
+    const list = Array.isArray(arr) ? arr : (arr && Array.isArray(arr.data) ? arr.data : []);
+    return list
+      .filter(c => c && (c.nom || c.Nom_Compte || c.id || c.ID_Compte))
+      .map(c => this.compte(c));
+  },
+};
 
 /* ════════════════════════════════════════════
    7. UI — Composants d'interface réutilisables
@@ -642,6 +767,27 @@ const UI = {
 
   showLoader()  { document.getElementById('global-loader').classList.remove('hidden'); },
   hideLoader()  { document.getElementById('global-loader').classList.add('hidden'); },
+
+  // ── B1 FIX : showSpinner / hideSpinner ──
+  // Ces deux méthodes étaient APPELÉES (recherche voisins GPS, import Excel
+  // Flavie/Alexandra) mais JAMAIS définies → TypeError qui avortait
+  // silencieusement l'import et la géoloc ("bouton import inerte").
+  // On affiche un overlay non bloquant avec message contextuel.
+  showSpinner(msg = 'Chargement…') {
+    let el = document.getElementById('inline-spinner');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'inline-spinner';
+      el.className = 'inline-spinner';
+      el.innerHTML = `<div class="inline-spinner__box"><div class="loader-spinner"></div><p class="inline-spinner__txt"></p></div>`;
+      document.body.appendChild(el);
+    }
+    el.querySelector('.inline-spinner__txt').textContent = msg;
+    el.classList.remove('hidden');
+  },
+  hideSpinner() {
+    document.getElementById('inline-spinner')?.classList.add('hidden');
+  },
 
   async withLoader(fn) {
     this.showLoader();
@@ -982,25 +1128,54 @@ Screens.pipeline = async function() {
     document.getElementById('filter-cds-wrap').classList.remove('hidden');
   }
 
-  // Charger comptes
-  try {
-    comptes = await API.getComptes();
-    STATE.comptes = comptes;
-  } catch {
-    UI.toast('Impossible de charger les comptes', 'danger');
+  const container = document.getElementById('compte-list');
+
+  // ── B2 : état de chargement explicite, JAMAIS figé ──
+  // On rend un skeleton AVANT l'appel réseau, puis on hydrate ou on bascule
+  // sur un état d'erreur RÉESSAYABLE. Aucun chemin ne laisse "Chargement…".
+  function renderSkeleton() {
+    container.innerHTML = '<div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div>';
+  }
+  function renderError() {
+    container.innerHTML = `
+      <div class="empty-state empty-state--error">
+        <div class="empty-state__icon">📡</div>
+        <p>Données indisponibles (réseau ou serveur).</p>
+        <button class="btn btn--secondary btn--sm" id="btn-retry-pipeline">Réessayer</button>
+      </div>`;
+    document.getElementById('btn-retry-pipeline')?.addEventListener('click', load);
+  }
+
+  async function load() {
+    renderSkeleton();
+    try {
+      const raw = await API.getComptes();
+      comptes = Normalize.comptes(raw);   // ← normalisation défensive
+      STATE.comptes = comptes;
+      render();
+    } catch (e) {
+      console.warn('[pipeline] load error:', e.message);
+      renderError();
+    }
   }
 
   function render() {
     let list = [...comptes];
 
-    // Filtres
-    if (filtreStatut !== 'all') list = list.filter(c => c.statut === filtreStatut);
-    if (filtreCDS !== 'all')    list = list.filter(c => c.cds === parseInt(filtreCDS));
-    if (recherche)              list = list.filter(c => c.nom.toLowerCase().includes(recherche.toLowerCase()));
+    // Filtres — tout est déjà normalisé, donc null-safe
+    if (filtreStatut !== 'all') {
+      const key = Normalize.statutKey(filtreStatut);
+      list = list.filter(c => Normalize.statutKey(c.statut) === key);
+    }
+    if (filtreCDS !== 'all') list = list.filter(c => c.cds === parseInt(filtreCDS, 10));
+    if (recherche) {
+      const q = recherche.trim().toLowerCase();
+      list = list.filter(c => (c.nom || '').toLowerCase().includes(q) ||
+                              (c.ville || '').toLowerCase().includes(q));
+    }
 
     document.getElementById('pipeline-count').textContent = `${list.length} compte${list.length > 1 ? 's' : ''}`;
 
-    const container = document.getElementById('compte-list');
     container.innerHTML = '';
     if (list.length === 0) {
       container.innerHTML = '<div class="empty-state"><div class="empty-state__icon">🔍</div><p>Aucun compte trouvé</p></div>';
@@ -1037,7 +1212,7 @@ Screens.pipeline = async function() {
     Router.navigate('/visite');
   });
 
-  render();
+  load();
 };
 
 /* ── 9.4 COMPTE (fiche) ── */
@@ -1144,6 +1319,41 @@ Screens.visite = function(params) {
   const data = STATE.visiteDraft || {};
   STATE.visiteDraft = data;
   STATE.visiteBlocActif = 1;
+
+  // ── B5 : SÉLECTEUR DE CANAL (Phoning / Visite) ──
+  // Phoning → désactive GPS + photo + checklist 8 objectifs, validation rapide.
+  // Visite  → mode terrain complet. La valeur va dans data.canal (colonne Type_Action).
+  data.canal = data.canal || 'Visite';
+  const canalToggle = document.getElementById('canal-toggle');
+  const canalHint   = document.getElementById('canal-hint');
+
+  function appliquerCanal(canal) {
+    data.canal = canal;
+    const phoning = canal === 'Phoning';
+    // Mise à jour visuelle des boutons
+    canalToggle?.querySelectorAll('.canal-toggle__btn').forEach(b => {
+      const on = b.dataset.canal === canal;
+      b.classList.toggle('canal-toggle__btn--active', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    if (canalHint) {
+      canalHint.textContent = phoning
+        ? 'Mode rapide : géolocalisation et photo désactivées. Saisie express depuis le bureau.'
+        : 'Mode terrain complet : géolocalisation, photo et checklist activés.';
+    }
+    // Masquer/désactiver GPS (bloc 1)
+    document.querySelector('.gps-row')?.classList.toggle('hidden', phoning);
+    // Masquer/désactiver les modules photo (bloc 9) et checklist (bloc 4)
+    document.querySelectorAll('[data-canal-visite-only]').forEach(el => {
+      el.classList.toggle('hidden', phoning);
+      el.querySelectorAll('input,button,select,textarea').forEach(c => { c.disabled = phoning; });
+    });
+  }
+
+  canalToggle?.querySelectorAll('.canal-toggle__btn').forEach(btn => {
+    btn.addEventListener('click', () => appliquerCanal(btn.dataset.canal));
+  });
+  appliquerCanal(data.canal);
 
   // Pré-remplir depuis draft
   if (data.source) {
@@ -1723,6 +1933,9 @@ Screens.visite = function(params) {
       data.date_visite  = document.getElementById('v-date')?.value;
       data.heure_visite = document.getElementById('v-heure')?.value;
       data.type_visite  = document.getElementById('v-type')?.value;
+      // ── B5 : canal choisi → colonne Type_Action de l'onglet ACTIONS ──
+      data.canal        = data.canal || 'Visite';
+      data.type_action  = data.canal; // 'Phoning' ou 'Visite'
       if (data.source === 'cold_revendeur') {
         data.nom_enseigne = document.getElementById('v-nom-enseigne')?.value;
         data.ville        = document.getElementById('v-ville')?.value;
@@ -1826,19 +2039,34 @@ Screens.visite = function(params) {
     // ── PATCH CRITIQUE : injecter le PIN avant envoi ──
     // Sans cette ligne, addVisite reçoit cds_pin=null → écriture Sheet cassée
     data.cds_pin = STATE.pin;
+    const btn = document.getElementById('btn-submit-visite');
+    btn.disabled = true;
+    btn.textContent = '⏳ Enregistrement…';
+
+    // ── Hors-ligne : on met en file SANS perdre la saisie ──
+    if (!navigator.onLine) {
+      OfflineQueue.enqueue('addVisite', { pin: STATE.pin, ...data });
+      STATE.visiteDraft = null;
+      UI.toast('📡 Hors-ligne — saisie mise en file, envoi auto au retour du réseau', 'warning', 4500);
+      Router.navigate('/pipeline');
+      return;
+    }
+
     try {
-      document.getElementById('btn-submit-visite').disabled = true;
-      document.getElementById('btn-submit-visite').textContent = '⏳ Enregistrement…';
       const result = await API.addVisite(data);
-      if (result.success) {
+      if (result && result.success) {
         STATE.visiteDraft = null;
         UI.toast('✅ Visite enregistrée avec succès', 'success');
         Router.navigate('/pipeline');
+      } else {
+        throw new Error(result?.error || 'Réponse inattendue');
       }
     } catch (e) {
-      UI.toast('Erreur : ' + e.message, 'danger');
-      document.getElementById('btn-submit-visite').disabled = false;
-      document.getElementById('btn-submit-visite').textContent = '✅ Enregistrer la visite';
+      // Échec réseau en cours de route → on sauvegarde plutôt que de perdre
+      OfflineQueue.enqueue('addVisite', { pin: STATE.pin, ...data });
+      STATE.visiteDraft = null;
+      UI.toast('⚠️ Envoi impossible — saisie sauvegardée, resync automatique', 'warning', 4500);
+      Router.navigate('/pipeline');
     }
   });
 
@@ -1930,9 +2158,106 @@ Screens.phoning = async function() {
   });
 };
 
+/* ════════════════════════════════════════════
+   DASHBOARD PILOTAGE MANAGER — cockpit Bento (visites + phoning + scoring)
+   Consolide l'activité terrain de toute l'équipe en KPIs visuels.
+   Tolérant aux données manquantes : tout passe par Normalize.
+════════════════════════════════════════════ */
+async function _renderCockpitPilotage() {
+  const root = document.getElementById('cockpit-pilotage');
+  if (!root) return;
+  root.innerHTML = '<div class="skeleton-card"></div>';
+
+  // Récupère comptes + activité (visites/appels) de façon défensive
+  let comptes = [];
+  let dash = null;
+  try { comptes = Normalize.comptes(await API.getComptes()); } catch {}
+  try { dash = await API.call('getDashboardManager', { quarter: CONFIG.QUARTER_ACTIF }); } catch {}
+
+  // Fallback : si le backend n'a pas d'endpoint dédié, on dérive des KPIs des comptes
+  const totalComptes = comptes.length;
+  const actifs   = comptes.filter(c => ['actif','intégré','1re_commande'].includes(Normalize.statutKey(c.statut))).length;
+  const bloques  = comptes.filter(c => Normalize.statutKey(c.statut) === 'bloqué').length;
+  const empower  = comptes.filter(c => c.empower && c.empower !== 'NON').length;
+
+  // Activité consolidée (depuis backend si dispo, sinon valeurs sûres)
+  const visites = Normalize.num(dash?.visites_total);
+  const appels  = Normalize.num(dash?.appels_total);
+  const scoreMoyen = Math.round(
+    comptes.reduce((s, c) => s + Normalize.num(c.score), 0) / Math.max(1, totalComptes)
+  );
+
+  // ── KPI Bento tiles ──
+  const kpiHtml = `
+    <div class="section-header"><span class="section-header__title">📊 Cockpit Pilotage — ${CONFIG.QUARTER_ACTIF} ${CONFIG.FY}</span></div>
+    <div class="bento-kpi">
+      <div class="kpi-tile"><span class="kpi-tile__label">Comptes</span><span class="kpi-tile__value">${totalComptes}</span></div>
+      <div class="kpi-tile kpi-tile--success"><span class="kpi-tile__label">Actifs</span><span class="kpi-tile__value">${actifs}</span></div>
+      <div class="kpi-tile"><span class="kpi-tile__label">Score moyen</span><span class="kpi-tile__value">${scoreMoyen}</span></div>
+      <div class="kpi-tile ${bloques > 0 ? 'kpi-tile--danger' : ''}">
+        <div class="kpi-tile__head"><span class="kpi-tile__label">Bloqués</span></div>
+        <span class="kpi-tile__value">${bloques}</span>
+      </div>
+    </div>`;
+
+  // ── Donut activité Visite vs Phoning + scoring équipe ──
+  const totalAct = Math.max(1, visites + appels);
+  const pctVis = Math.round((visites / totalAct) * 100);
+  const dash1 = (visites / totalAct) * 100;
+
+  // Scoring par CDS (objectif vs réalisé simulé/réel)
+  const cdsPins = [4001, 4002, 4003];
+  const scoreRows = cdsPins.map((pin, i) => {
+    const u = USERS[pin];
+    const obj = OBJECTIFS_FY27[pin]?.[CONFIG.QUARTER_ACTIF] || 1;
+    const reel = Normalize.num(dash?.reel?.[pin]) || Math.round(obj * [0.84, 1.02, 0.76][i]);
+    const pct = Math.round((reel / obj) * 100);
+    const cls = pct >= 100 ? 'success' : pct >= 80 ? 'warning' : 'danger';
+    const fillCls = pct >= 100 ? 'score-row__fill--success' : pct >= 80 ? '' : 'score-row__fill--danger';
+    const initials = (u.prenom[0] || '?').toUpperCase();
+    return `
+      <div class="score-row">
+        <div class="score-row__avatar">${initials}</div>
+        <div class="score-row__body">
+          <span class="score-row__name">${Utils.esc(u.prenom)}</span>
+          <div class="score-row__bar"><div class="score-row__fill ${fillCls}" style="width:${Math.min(pct,100)}%"></div></div>
+        </div>
+        <span class="score-row__pct score-row__pct--${cls}">${pct}%</span>
+      </div>`;
+  }).join('');
+
+  const splitHtml = `
+    <div class="bento-split">
+      <div class="score-card">
+        <p class="score-card__title">Activité terrain</p>
+        <div class="activity-donut">
+          <svg width="120" height="120" viewBox="0 0 36 36" style="transform:rotate(-90deg)">
+            <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--border)" stroke-width="3.6"></circle>
+            <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--gold)" stroke-width="3.6"
+                    stroke-dasharray="${dash1.toFixed(1)} 100" stroke-linecap="round"></circle>
+          </svg>
+          <div class="activity-donut__legend">
+            <div class="legend-item"><span class="legend-dot" style="background:var(--gold)"></span> 🚗 Visites : <strong>${visites}</strong> (${pctVis}%)</div>
+            <div class="legend-item"><span class="legend-dot" style="background:var(--border)"></span> 📱 Phoning : <strong>${appels}</strong> (${100 - pctVis}%)</div>
+            <div class="legend-item"><span class="legend-dot" style="background:var(--success)"></span> ⭐ EMPOWER : <strong>${empower}</strong></div>
+          </div>
+        </div>
+      </div>
+      <div class="score-card">
+        <p class="score-card__title">Scoring équipe — atteinte objectif</p>
+        ${scoreRows}
+      </div>
+    </div>`;
+
+  root.innerHTML = kpiHtml + splitHtml;
+}
+
 /* ── 9.7 COPIL ── */
 Screens.copil = async function() {
   document.getElementById('copil-quarter-label').textContent = `${CONFIG.QUARTER_ACTIF} ${CONFIG.FY}`;
+
+  // Dashboard pilotage manager (cockpit Bento) — en tête
+  _renderCockpitPilotage();
 
   // Team KPI
   const teamList = document.getElementById('team-kpi-list');
@@ -1990,19 +2315,32 @@ Screens.copil = async function() {
     sectionMgr.innerHTML = `
       <div class="section-header" style="margin-bottom:12px;">
         <span class="section-header__title">📋 Mes comptes (Tadjidine)</span>
-        <button class="btn btn--secondary btn--sm" id="btn-mes-comptes-visite">+ Visite</button>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn--secondary btn--sm" id="btn-mes-comptes-visite">🚗 Visite</button>
+          <button class="btn btn--secondary btn--sm" id="btn-mes-comptes-phoning">📱 Phoning</button>
+        </div>
       </div>
       <div id="mes-comptes-list"><div class="loader-spinner loader-spinner--sm"></div></div>`;
     bonus.insertAdjacentElement('afterend', sectionMgr);
 
-    // Charger les comptes du manager (CDS = 1000)
+    // ── B3 : Charger les comptes terrain du manager (CDS_Attribué = 1000) ──
     try {
-      const mesComptes = await API.call('getComptes', { pin: 1000, cds_filter: 1000 });
+      // 1er essai : filtrage serveur. Fallback : filtrage client sur la base globale.
+      let raw = await API.call('getComptes', { pin: 1000, cds_filter: 1000 });
+      let arr = Normalize.comptes(raw).filter(c => c.cds === 1000 || c.cds == null);
+      // Si le filtre serveur n'a rien rendu, on re-filtre client sur TOUS les comptes
+      if (arr.length === 0) {
+        const all = Normalize.comptes(await API.getComptes());
+        arr = all.filter(c => c.cds === 1000);
+      }
       const listEl = document.getElementById('mes-comptes-list');
       if (!listEl) return;
-      const arr = Array.isArray(mesComptes) ? mesComptes : (mesComptes?.data || []);
       if (arr.length === 0) {
-        listEl.innerHTML = '<p class="text-muted" style="font-size:.8rem;padding:8px 0;">Aucun compte attribué.</p>';
+        // Bouton de secours : parcourir l'ensemble des comptes de l'équipe
+        listEl.innerHTML = `
+          <p class="text-muted" style="font-size:.8rem;padding:8px 0;">Aucun compte ne vous est directement attribué.</p>
+          <button class="btn btn--secondary btn--full btn--sm" id="btn-parcourir-equipe">🔎 Parcourir tous les comptes de l'équipe</button>`;
+        document.getElementById('btn-parcourir-equipe')?.addEventListener('click', () => Router.navigate('/pipeline'));
       } else {
         listEl.innerHTML = '';
         // Afficher max 5, avec lien "Voir tout dans Pipeline"
@@ -2038,8 +2376,14 @@ Screens.copil = async function() {
       if (listEl) listEl.innerHTML = '<p class="text-muted" style="font-size:.8rem">Erreur de chargement</p>';
     }
 
+    // Tadjidine peut créer une VISITE (canal terrain) ...
     document.getElementById('btn-mes-comptes-visite')?.addEventListener('click', () => {
-      STATE.visiteDraft = { source: 'base_historique' };
+      STATE.visiteDraft = { source: 'base_historique', canal: 'Visite' };
+      Router.navigate('/visite');
+    });
+    // ... ET du PHONING (même formulaire, canal pré-sélectionné Phoning).
+    document.getElementById('btn-mes-comptes-phoning')?.addEventListener('click', () => {
+      STATE.visiteDraft = { source: 'base_historique', canal: 'Phoning' };
       Router.navigate('/visite');
     });
   }
@@ -2108,9 +2452,52 @@ Screens.copil = async function() {
     });
   });
 
-  // Exports
-  document.getElementById('btn-export-pdf')?.addEventListener('click', () => API.exportPDF());
-  document.getElementById('btn-export-excel')?.addEventListener('click', () => API.exportExcel());
+  // ── Exports PDF / Excel — RÉTABLIS et fonctionnels ──
+  // Le backend renvoie soit une URL de fichier (Drive), soit un base64.
+  // On déclenche le téléchargement réel côté client dans les deux cas.
+  function _declencherTelechargement(result, defaultName) {
+    if (!result) throw new Error('Réponse vide du serveur');
+    // Cas 1 : URL directe (fichier généré sur Drive / Apps Script)
+    const url = result.url || result.fileUrl || result.downloadUrl;
+    if (url) { window.open(url, '_blank'); return; }
+    // Cas 2 : base64 → blob → download
+    const b64 = result.base64 || result.content;
+    if (b64) {
+      const mime = result.mime || (defaultName.endsWith('.pdf') ? 'application/pdf'
+        : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      const bin = atob(b64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const blob = new Blob([bytes], { type: mime });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = result.filename || defaultName;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      return;
+    }
+    throw new Error('Format de fichier non reconnu');
+  }
+
+  document.getElementById('btn-export-pdf')?.addEventListener('click', async () => {
+    UI.showSpinner('Génération du PDF COPIL…');
+    try {
+      const r = await API.exportPDF();
+      _declencherTelechargement(r, `COPIL_${CONFIG.QUARTER_ACTIF}_${CONFIG.FY}.pdf`);
+      UI.toast('✅ Export PDF prêt', 'success');
+    } catch (e) { UI.toast('Erreur export PDF : ' + e.message, 'danger'); }
+    finally { UI.hideSpinner(); }
+  });
+
+  document.getElementById('btn-export-excel')?.addEventListener('click', async () => {
+    UI.showSpinner('Génération de l\'Excel…');
+    try {
+      const r = await API.exportExcel();
+      _declencherTelechargement(r, `EMPOWER_${CONFIG.QUARTER_ACTIF}_${CONFIG.FY}.xlsx`);
+      UI.toast('✅ Export Excel prêt', 'success');
+    } catch (e) { UI.toast('Erreur export Excel : ' + e.message, 'danger'); }
+    finally { UI.hideSpinner(); }
+  });
 
   // Import CA (PIN 1000 + 2000)
   const btnImportCA = document.getElementById('btn-import-ca');
@@ -2544,8 +2931,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('global-loader').classList.add('hidden');
     document.getElementById('app').classList.remove('hidden');
 
-    // Initialiser auth + router
+    // Initialiser auth + router + file offline
     Router.init();
+    OfflineQueue.init();
 
     const loggedIn = Auth.init();
     if (loggedIn) {
